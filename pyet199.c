@@ -32,6 +32,131 @@ static PyObject *NormalError;
     }\
  }while(0)
 
+typedef struct {
+    PyObject_HEAD
+    ET_CONTEXT etContext;
+}ETContextObject;
+
+static void
+ETContext_dealloc(ETContextObject* self)
+{
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+static PyObject *
+ETContext_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    ETContextObject *self;
+    self = (ETContextObject *)type->tp_alloc(type, 0);
+    memset(self->etContext,0,sizeof(ET_CONTEXT));
+    return (PyObject *)self;
+}
+
+static int
+ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
+{
+    char *pzId,*pzAtr;
+    int lId,lAtr;
+    static char *kwlist[] = {"dwIndex","dwVersion","hLock","reserve","dwCustomer","bAtr","bID",NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist, 
+                                      &first, &last, 
+                                      &self->number))
+        return -1; 
+    return 0;
+}
+
+
+static PyMemberDef ETContext_members[] = {
+    {"first", T_OBJECT_EX, offsetof(ETContextObject, first), 0,
+     "first name"},
+    {"last", T_OBJECT_EX, offsetof(ETContextObject, last), 0,
+     "last name"},
+    {"number", T_INT, offsetof(ETContextObject, number), 0,
+     "noddy number"},
+    {NULL}  /* Sentinel */
+};
+
+static PyObject *
+ETContext_name(ETContextObject* self)
+{
+    static PyObject *format = NULL;
+    PyObject *args, *result;
+
+    if (format == NULL) {
+        format = PyString_FromString("%s %s");
+        if (format == NULL)
+            return NULL;
+    }
+
+    if (self->first == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "first");
+        return NULL;
+    }
+
+    if (self->last == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "last");
+        return NULL;
+    }
+
+    args = Py_BuildValue("OO", self->first, self->last);
+    if (args == NULL)
+        return NULL;
+
+    result = PyString_Format(format, args);
+    Py_DECREF(args);
+    
+    return result;
+}
+
+static PyMethodDef ETContext_methods[] = {
+    {"name", (PyCFunction)ETContext_name, METH_NOARGS,
+     "Return the name, combining the first and last name"
+    },
+    {NULL}  /* Sentinel */
+};
+
+static PyTypeObject ETContextType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "pyet199.ETContext",             /*tp_name*/
+    sizeof(ETContextObject),             /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)ETContext_dealloc, /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "ETContext objects",           /* tp_doc */
+    0,                   /* tp_traverse */
+    0,                   /* tp_clear */
+    0,                   /* tp_richcompare */
+    0,                   /* tp_weaklistoffset */
+    0,                   /* tp_iter */
+    0,                   /* tp_iternext */
+    ETContext_methods,             /* tp_methods */
+    ETContext_members,             /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)ETContext_init,      /* tp_init */
+    0,                         /* tp_alloc */
+    ETContext_new,                 /* tp_new */
+};
+
 
 /**
  * Enum connected ET199 devices.  -> @ref: ETEnum
@@ -94,14 +219,17 @@ static PyObject *pETEnum(PyObject *self){
  *  ETOpenInfo: optional argument for open with specific mode. -> @ref: ETOpenEx
  * Return: ETContext object or None for failure.
  */
-static PyObject *pETOpen(PyObject *self, PyObject *args, PyObject *kwargs){
-  /*(
-        IN OUT  ET_CONTEXT			*pETCtx
-        ETOpenInfo
-    );*/
-  if (!PyArg_ParseTuple(args, "ids", &i, &d, &s)) {
+static PyObject *pETOpen(PyObject *self, PyObject *args){
+  //PyObject *pETCtxObj=NULL;
+  //PyObject *pOpenInfo=NULL;
+  ETContext ETCtx={0};
+  if (!PyArg_ParseTuple(args, "i|O", &ETCtx.dwIndex,&pOpenInfo)) {
     return NULL;
   }
+  if(! PyDict_Check(pETCtxObj)){
+    INVALID_PARAMS("ETContext must be a dict!");
+  }
+
   
   Py_RETURN_NONE;
 }
@@ -321,7 +449,7 @@ static PyObject *pETGenRsaKey(PyObject *self, PyObject *args){
 static PyMethodDef methods[] = {
   { "ETEnum", (PyCFunction)pETEnum, METH_NOARGS,
       "ETEnum: " },
-  { "ETOpen", (PyCFunction)pETOpen, METH_VARARGS|METH_KEYWORDS,
+  { "ETOpen", (PyCFunction)pETOpen, METH_VARARGS,
       "ETOpen: " },
   { "ETClose", (PyCFunction)pETClose, METH_VARARGS,
       "ETClose: " },
@@ -333,13 +461,13 @@ static PyMethodDef methods[] = {
       "ETChangeDir: " },
   { "ETEraseDir", (PyCFunction)pETEraseDir, METH_VARARGS,
       "ETEraseDir: " },
-  { "ETVerifyPin", (PyCFunction)pETVerifyPin, METH_VARARGS|METH_KEYWORDS,
+  { "ETVerifyPin", (PyCFunction)pETVerifyPin, METH_VARARGS,
       "ETVerifyPin: " },
   { "ETChangePin", (PyCFunction)pETChangePin, METH_VARARGS,
       "ETChangePin: " },
   { "ETWriteFile", (PyCFunction)pETWriteFile, METH_VARARGS,
       "ETWriteFile: " },
-  { "ETExecute", (PyCFunction)pETExecute, METH_VARARGS|METH_KEYWORDS,
+  { "ETExecute", (PyCFunction)pETExecute, METH_VARARGS,
       "ETExecute: " },
   { "ETCreateFile", (PyCFunction)pETCreateFile, METH_VARARGS,
       "ETCreateFile: " },
