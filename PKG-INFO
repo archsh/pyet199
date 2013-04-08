@@ -1,0 +1,15 @@
+Metadata-Version: 1.0
+Name: rsbk_license
+Version: 0.8
+Summary: Portable network interface information.
+Home-page: http://www.dingrong.cn/rsbk_license
+Author: Mingcai SHEN
+Author-email: shenmc@dingrong.cn
+License: Copyright Reserved by DINGRONG 
+Description: DR Software licensing.
+        
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: 
+Classifier: Topic :: System :: License
