@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <structmember.h>
 #include "ET199_32.h"
 #define _STR(x) #x
 #define STR(x)  _STR(x)
@@ -7,28 +8,28 @@
 static PyObject *InvalidParameter;
 static PyObject *NormalError;
 
-#define INVALID_PARAMS(msg)\
+#define INVALID_PARAMS(msg,ret)\
   do{\
     PyErr_SetString(InvalidParameter,msg); \
-    return NULL;\
+    return ret;\
   }while(0)
 
-#define NORMAL_ERROR(dwRet)\
+#define NORMAL_ERROR(dwRet,ret)\
   do{\
     char msgbuf[128]={0}; \
     if(0==ETFormatErrorMessage(dwRet,msgbuf,128)){ \
       PyErr_SetString(NormalError,msgbuf); \
-      return NULL;\
+      return ret;\
     }else{\
       PyErr_SetString(NormalError,"Unknow"); \
-      return NULL;\
+      return ret;\
     }\
   }while(0)
 
-#define DWRET_VALIDATE(dwRet)\
+#define DWRET_VALIDATE(dwRet,ret)\
   do{\
     if(dwRet!=0){\
-      NORMAL_ERROR(dwRet);\
+      NORMAL_ERROR(dwRet,ret);\
     }\
  }while(0)
 
@@ -44,44 +45,46 @@ ETContext_dealloc(ETContextObject* self)
 }
 
 static PyObject *
-ETContext_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+ETContext_new(PyTypeObject *type)
 {
     ETContextObject *self;
     self = (ETContextObject *)type->tp_alloc(type, 0);
-    memset(self->etContext,0,sizeof(ET_CONTEXT));
+    //memset(&self->etContext,0,sizeof(ET_CONTEXT));
     return (PyObject *)self;
 }
 
 static int
 ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
 {
-    char *pzId,*pzAtr;
-    int lId,lAtr;
-    static char *kwlist[] = {"dwIndex","dwVersion","hLock","reserve","dwCustomer","bAtr","bID",NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist, 
-                                      &first, &last, 
-                                      &self->number))
+    char *pzId=NULL,*pzAtr=NULL;
+    int lId=0,lAtr=0;
+    static char *kwlist[] = {"dwIndex","dwVersion","hLock","dwCustomer","bAtr","bID",NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiis#s#", kwlist, 
+                                      &self->etContext.dwIndex,
+                                      &self->etContext.dwVersion,
+                                      &self->etContext.hLock,
+                                      &self->etContext.dwCustomer,
+                                      &pzAtr,&lAtr,
+                                      &pzId,&lId))
         return -1; 
+    if(pzId!=NULL && lId!=MAX_ID_LEN){
+      INVALID_PARAMS("Length of ID must be 8!",-1);
+    }
+    memcpy(self->etContext.bID,pzId,MAX_ID_LEN);
+    if(pzAtr!=NULL && lAtr>MAX_ATR_LEN){
+      INVALID_PARAMS("Length of Atr must not be longer than 16!",-1);
+    }
+    memcpy(self->etContext.bAtr,pzAtr,lAtr);
     return 0;
 }
 
 
-static PyMemberDef ETContext_members[] = {
-    {"first", T_OBJECT_EX, offsetof(ETContextObject, first), 0,
-     "first name"},
-    {"last", T_OBJECT_EX, offsetof(ETContextObject, last), 0,
-     "last name"},
-    {"number", T_INT, offsetof(ETContextObject, number), 0,
-     "noddy number"},
-    {NULL}  /* Sentinel */
-};
-
 static PyObject *
-ETContext_name(ETContextObject* self)
+ETContext_get(ETContextObject* self, PyObject *args)
 {
     static PyObject *format = NULL;
-    PyObject *args, *result;
-
+    PyObject *result;
+/*
     if (format == NULL) {
         format = PyString_FromString("%s %s");
         if (format == NULL)
@@ -104,16 +107,34 @@ ETContext_name(ETContextObject* self)
 
     result = PyString_Format(format, args);
     Py_DECREF(args);
-    
+*/    
     return result;
 }
 
+//static PyMemberDef ETContext_members[] = 
+static PyMemberDef ETContext_members[] = {
+    {"Index", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,dwIndex), READONLY,
+        "dwIndex"},
+    {"Version", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,dwVersion), READONLY,
+        "dwVersion"},
+    {"Lock", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,hLock), READONLY,
+        "hLock"},
+    {"Customer", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,dwCustomer), READONLY,
+        "dwCustomer"},
+    {"Id", T_STRING, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,bID), READONLY,
+        "bId"},
+    {"ATR", T_STRING, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,bAtr), READONLY,
+        "bAtr"},
+    {NULL}  //Sentinel
+};
+
 static PyMethodDef ETContext_methods[] = {
-    {"name", (PyCFunction)ETContext_name, METH_NOARGS,
-     "Return the name, combining the first and last name"
+    {"get", (PyCFunction)ETContext_get, METH_VARARGS,
+     "get variable from instance."
     },
     {NULL}  /* Sentinel */
 };
+
 
 static PyTypeObject ETContextType = {
     PyObject_HEAD_INIT(NULL)
@@ -157,6 +178,7 @@ static PyTypeObject ETContextType = {
     ETContext_new,                 /* tp_new */
 };
 
+/*********************************************************************************************************************/
 
 /**
  * Enum connected ET199 devices.  -> @ref: ETEnum
@@ -171,7 +193,7 @@ static PyObject *pETEnum(PyObject *self){
   PyObject *result = PyList_New(0);
   dwRet = ETEnum(NULL,&keyCount);
   if(ET_E_INSUFFICIENT_BUFFER!=dwRet && !dwRet){
-    NORMAL_ERROR(dwRet);
+    NORMAL_ERROR(dwRet,NULL);
   }
   if(keyCount==0){
     return result;
@@ -181,7 +203,7 @@ static PyObject *pETEnum(PyObject *self){
   dwRet=ETEnum(pETContextList,&keyCount);
   if(0!=dwRet){
     free(pETContextList);
-    NORMAL_ERROR(dwRet);
+    NORMAL_ERROR(dwRet,NULL);
   }
   for(i=0;i<keyCount;i++){
     PyObject *dict = PyDict_New();
@@ -220,18 +242,14 @@ static PyObject *pETEnum(PyObject *self){
  * Return: ETContext object or None for failure.
  */
 static PyObject *pETOpen(PyObject *self, PyObject *args){
-  //PyObject *pETCtxObj=NULL;
-  //PyObject *pOpenInfo=NULL;
-  ETContext ETCtx={0};
-  if (!PyArg_ParseTuple(args, "i|O", &ETCtx.dwIndex,&pOpenInfo)) {
+  PyObject *pETCtxObj=NULL;
+  ET_OPENINFO pOpenInfo={0,0};
+  if (!PyArg_ParseTuple(args, "O|ii", &pETCtxObj,&pOpenInfo.dwOpenInfoSize,&pOpenInfo.dwShareMode)) {
     return NULL;
   }
-  if(! PyDict_Check(pETCtxObj)){
-    INVALID_PARAMS("ETContext must be a dict!");
-  }
-
   
-  Py_RETURN_NONE;
+  //Py_RETURN_NONE;
+  return pETCtxObj;
 }
 
 /**
@@ -641,4 +659,9 @@ initpyet199(void)
   InvalidParameter = PyErr_NewException("pyet199.InvalidParameter", NULL, NULL);
   Py_INCREF(InvalidParameter);
   PyModule_AddObject(m, "InvalidParameter", InvalidParameter);
+
+  //ETContextType
+  Py_INCREF(&ETContextType);
+  PyModule_AddObject(m, "ETContext", (PyObject *)&ETContextType);
+
 }
