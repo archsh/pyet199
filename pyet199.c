@@ -4,6 +4,7 @@
 #define _STR(x) #x
 #define STR(x)  _STR(x)
 #define DEBUG 1
+//#define NODDY_TEST 1
 /***************************************************************************************************************************/
 static PyObject *InvalidParameter;
 static PyObject *NormalError;
@@ -35,7 +36,14 @@ static PyObject *NormalError;
 
 typedef struct {
     PyObject_HEAD
-    ET_CONTEXT etContext;
+    DWORD dwIndex;
+    DWORD dwVersion;
+    DWORD dwCustomer;
+    DWORD hLock;
+    BYTE  bID[MAX_ID_LEN];
+    BYTE  bAtr[MAX_ATR_LEN];
+    DWORD dwAtrLen;
+    //ET_CONTEXT etContext;
 }ETContextObject;
 
 static void
@@ -60,21 +68,21 @@ ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
     int lId=0,lAtr=0;
     static char *kwlist[] = {"dwIndex","dwVersion","hLock","dwCustomer","bAtr","bID",NULL};
     if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiis#s#", kwlist, 
-                                      &self->etContext.dwIndex,
-                                      &self->etContext.dwVersion,
-                                      &self->etContext.hLock,
-                                      &self->etContext.dwCustomer,
+                                      &self->dwIndex,
+                                      &self->dwVersion,
+                                      &self->hLock,
+                                      &self->dwCustomer,
                                       &pzAtr,&lAtr,
                                       &pzId,&lId))
         return -1; 
     if(pzId!=NULL && lId!=MAX_ID_LEN){
       INVALID_PARAMS("Length of ID must be 8!",-1);
     }
-    memcpy(self->etContext.bID,pzId,MAX_ID_LEN);
+    memcpy(self->bID,pzId,MAX_ID_LEN);
     if(pzAtr!=NULL && lAtr>MAX_ATR_LEN){
       INVALID_PARAMS("Length of Atr must not be longer than 16!",-1);
     }
-    memcpy(self->etContext.bAtr,pzAtr,lAtr);
+    memcpy(self->bAtr,pzAtr,lAtr);
     return 0;
 }
 
@@ -113,17 +121,17 @@ ETContext_get(ETContextObject* self, PyObject *args)
 
 //static PyMemberDef ETContext_members[] = 
 static PyMemberDef ETContext_members[] = {
-    {"Index", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,dwIndex), READONLY,
+    {"Index", T_INT, offsetof(ET_CONTEXT,dwIndex), READONLY,
         "dwIndex"},
-    {"Version", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,dwVersion), READONLY,
+    {"Version", T_INT, offsetof(ET_CONTEXT,dwVersion), READONLY,
         "dwVersion"},
-    {"Lock", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,hLock), READONLY,
+    {"Lock", T_INT, offsetof(ET_CONTEXT,hLock), READONLY,
         "hLock"},
-    {"Customer", T_INT, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,dwCustomer), READONLY,
+    {"Customer", T_INT, offsetof(ET_CONTEXT,dwCustomer), READONLY,
         "dwCustomer"},
-    {"Id", T_STRING, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,bID), READONLY,
+    {"Id", T_STRING, offsetof(ET_CONTEXT,bID), READONLY,
         "bId"},
-    {"ATR", T_STRING, offsetof(ETContextObject, etContext)+offsetof(ET_CONTEXT,bAtr), READONLY,
+    {"ATR", T_STRING, offsetof(ET_CONTEXT,bAtr), READONLY,
         "bAtr"},
     {NULL}  //Sentinel
 };
@@ -137,8 +145,8 @@ static PyMethodDef ETContext_methods[] = {
 
 
 static PyTypeObject ETContextType = {
+#if 0
     PyObject_HEAD_INIT(NULL)
-    0,                         /*ob_size*/
     "pyet199.ETContext",             /*tp_name*/
     sizeof(ETContextObject),             /*tp_basicsize*/
     0,                         /*tp_itemsize*/
@@ -176,8 +184,258 @@ static PyTypeObject ETContextType = {
     (initproc)ETContext_init,      /* tp_init */
     0,                         /* tp_alloc */
     ETContext_new,                 /* tp_new */
+#else
+    PyObject_HEAD_INIT(NULL)
+    "pyet199.ETContext",//const char *tp_name; /* For printing, in format "<module>.<name>" */
+    sizeof(ETContextObject),0,//Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
+    /* Methods to implement standard operations */
+    (destructor)ETContext_dealloc,//destructor tp_dealloc;
+    0,//printfunc tp_print;
+    0,//getattrfunc tp_getattr;
+    0,//setattrfunc tp_setattr;
+    0,//cmpfunc tp_compare;
+    0,//reprfunc tp_repr;
+
+    /* Method suites for standard classes */
+
+    0,//PyNumberMethods *tp_as_number;
+    0,//PySequenceMethods *tp_as_sequence;
+    0,//PyMappingMethods *tp_as_mapping;
+
+    /* More standard operations (here for binary compatibility) */
+
+    0,//hashfunc tp_hash;
+    0,//ternaryfunc tp_call;
+    0,//reprfunc tp_str;
+    0,//getattrofunc tp_getattro;
+    0,//setattrofunc tp_setattro;
+
+    /* Functions to access object as input/output buffer */
+    0,//PyBufferProcs *tp_as_buffer;
+
+    /* Flags to define presence of optional/expanded features */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,//long tp_flags;
+
+    "ETContext objects",//const char *tp_doc; /* Documentation string */
+
+    /* Assigned meaning in release 2.0 */
+    /* call function for all accessible objects */
+    0,//traverseproc tp_traverse;
+
+    /* delete references to contained objects */
+    0,//inquiry tp_clear;
+
+    /* Assigned meaning in release 2.1 */
+    /* rich comparisons */
+    0,//richcmpfunc tp_richcompare;
+
+    /* weak reference enabler */
+    0,//Py_ssize_t tp_weaklistoffset;
+
+    /* Added in release 2.2 */
+    /* Iterators */
+    0,//getiterfunc tp_iter;
+    0,//iternextfunc tp_iternext;
+
+    /* Attribute descriptor and subclassing stuff */
+    ETContext_methods,//struct PyMethodDef *tp_methods;
+    ETContext_members,//struct PyMemberDef *tp_members;
+    NULL,//struct PyGetSetDef *tp_getset;
+    NULL,//struct _typeobject *tp_base;
+    NULL,//PyObject *tp_dict;
+    NULL,//descrgetfunc tp_descr_get;
+    NULL,//descrsetfunc tp_descr_set;
+    NULL,//Py_ssize_t tp_dictoffset;
+    (initproc)ETContext_init,//initproc tp_init;
+    NULL,//allocfunc tp_alloc;
+    ETContext_new,//newfunc tp_new;
+    NULL,//freefunc tp_free; /* Low-level free-memory routine */
+    NULL,//inquiry tp_is_gc; /* For PyObject_IS_GC */
+    NULL,//PyObject *tp_bases;
+    NULL,//PyObject *tp_mro; /* method resolution order */
+    NULL,//PyObject *tp_cache;
+    NULL,//PyObject *tp_subclasses;
+    NULL,//PyObject *tp_weaklist;
+    NULL,//destructor tp_del;
+
+    /* Type attribute cache version tag. Added in version 2.6 */
+    NULL,//unsigned int tp_version_tag;
+
+#ifdef COUNT_ALLOCS
+    /* these must be last and never explicitly initialized */
+    NULL,//Py_ssize_t tp_allocs;
+    NULL,//Py_ssize_t tp_frees;
+    NULL,//Py_ssize_t tp_maxalloc;
+    NULL,//struct _typeobject *tp_prev;
+    NULL,//struct _typeobject *tp_next;
+#endif
+#endif //
+};
+/*********************************************************************************************************************/
+#ifdef NODDY_TEST
+typedef struct {
+    PyObject_HEAD
+    PyObject *first; /* first name */
+    PyObject *last;  /* last name */
+    int number;
+} Noddy;
+
+static void
+Noddy_dealloc(Noddy* self)
+{
+    Py_XDECREF(self->first);
+    Py_XDECREF(self->last);
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+static PyObject *
+Noddy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    Noddy *self;
+
+    self = (Noddy *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->first = PyString_FromString("");
+        if (self->first == NULL)
+          {
+            Py_DECREF(self);
+            return NULL;
+          }
+        
+        self->last = PyString_FromString("");
+        if (self->last == NULL)
+          {
+            Py_DECREF(self);
+            return NULL;
+          }
+
+        self->number = 0;
+    }
+
+    return (PyObject *)self;
+}
+
+static int
+Noddy_init(Noddy *self, PyObject *args, PyObject *kwds)
+{
+    PyObject *first=NULL, *last=NULL, *tmp;
+
+    static char *kwlist[] = {"first", "last", "number", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist, 
+                                      &first, &last, 
+                                      &self->number))
+        return -1; 
+
+    if (first) {
+        tmp = self->first;
+        Py_INCREF(first);
+        self->first = first;
+        Py_XDECREF(tmp);
+    }
+
+    if (last) {
+        tmp = self->last;
+        Py_INCREF(last);
+        self->last = last;
+        Py_XDECREF(tmp);
+    }
+
+    return 0;
+}
+
+
+static PyMemberDef Noddy_members[] = {
+    {"first", T_OBJECT_EX, offsetof(Noddy, first), 0,
+     "first name"},
+    {"last", T_OBJECT_EX, offsetof(Noddy, last), 0,
+     "last name"},
+    {"number", T_INT, offsetof(Noddy, number), 0,
+     "noddy number"},
+    {NULL}  /* Sentinel */
 };
 
+static PyObject *
+Noddy_name(Noddy* self)
+{
+    static PyObject *format = NULL;
+    PyObject *args, *result;
+
+    if (format == NULL) {
+        format = PyString_FromString("%s %s");
+        if (format == NULL)
+            return NULL;
+    }
+
+    if (self->first == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "first");
+        return NULL;
+    }
+
+    if (self->last == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "last");
+        return NULL;
+    }
+
+    args = Py_BuildValue("OO", self->first, self->last);
+    if (args == NULL)
+        return NULL;
+
+    result = PyString_Format(format, args);
+    Py_DECREF(args);
+    
+    return result;
+}
+
+static PyMethodDef Noddy_methods[] = {
+    {"name", (PyCFunction)Noddy_name, METH_NOARGS,
+     "Return the name, combining the first and last name"
+    },
+    {NULL}  /* Sentinel */
+};
+
+static PyTypeObject NoddyType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "noddy.Noddy",             /*tp_name*/
+    sizeof(Noddy),             /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)Noddy_dealloc, /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    "Noddy objects",           /* tp_doc */
+    0,                   /* tp_traverse */
+    0,                   /* tp_clear */
+    0,                   /* tp_richcompare */
+    0,                   /* tp_weaklistoffset */
+    0,                   /* tp_iter */
+    0,                   /* tp_iternext */
+    Noddy_methods,             /* tp_methods */
+    Noddy_members,             /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)Noddy_init,      /* tp_init */
+    0,                         /* tp_alloc */
+    Noddy_new,                 /* tp_new */
+};
+#endif /*NODDY_TEST*/
 /*********************************************************************************************************************/
 
 /**
@@ -663,5 +921,10 @@ initpyet199(void)
   //ETContextType
   Py_INCREF(&ETContextType);
   PyModule_AddObject(m, "ETContext", (PyObject *)&ETContextType);
+
+  #ifdef NODDY_TEST
+  Py_INCREF(&NoddyType);
+  PyModule_AddObject(m, "Noddy", (PyObject *)&NoddyType);
+  #endif //NODDY_TEST
 
 }
