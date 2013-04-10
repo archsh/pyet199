@@ -46,92 +46,27 @@ typedef struct {
     //ET_CONTEXT etContext;
 }ETContextObject;
 
-static void
-ETContext_dealloc(ETContextObject* self)
-{
-    self->ob_type->tp_free((PyObject*)self);
-}
+static void ETContext_dealloc(ETContextObject* self);
 
-static PyObject *
-ETContext_new(PyTypeObject *type)
-{
-    ETContextObject *self;
-    self = (ETContextObject *)type->tp_alloc(type, 0);
-    //memset(&self->etContext,0,sizeof(ET_CONTEXT));
-    return (PyObject *)self;
-}
+static PyObject *ETContext_new(PyTypeObject *type);
 
-static int
-ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
-{
-    char *pzId=NULL,*pzAtr=NULL;
-    int lId=0,lAtr=0;
-    static char *kwlist[] = {"dwIndex","dwVersion","hLock","dwCustomer","bAtr","bID",NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiis#s#", kwlist, 
-                                      &self->dwIndex,
-                                      &self->dwVersion,
-                                      &self->hLock,
-                                      &self->dwCustomer,
-                                      &pzAtr,&lAtr,
-                                      &pzId,&lId))
-        return -1; 
-    if(pzId!=NULL && lId!=MAX_ID_LEN){
-      INVALID_PARAMS("Length of ID must be 8!",-1);
-    }
-    memcpy(self->bID,pzId,MAX_ID_LEN);
-    if(pzAtr!=NULL && lAtr>MAX_ATR_LEN){
-      INVALID_PARAMS("Length of Atr must not be longer than 16!",-1);
-    }
-    memcpy(self->bAtr,pzAtr,lAtr);
-    return 0;
-}
+static int ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds);
 
-
-static PyObject *
-ETContext_get(ETContextObject* self, PyObject *args)
-{
-    static PyObject *format = NULL;
-    PyObject *result;
-/*
-    if (format == NULL) {
-        format = PyString_FromString("%s %s");
-        if (format == NULL)
-            return NULL;
-    }
-
-    if (self->first == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "first");
-        return NULL;
-    }
-
-    if (self->last == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "last");
-        return NULL;
-    }
-
-    args = Py_BuildValue("OO", self->first, self->last);
-    if (args == NULL)
-        return NULL;
-
-    result = PyString_Format(format, args);
-    Py_DECREF(args);
-*/    
-    return result;
-}
+static PyObject *ETContext_get(ETContextObject* self, PyObject *args);
 
 //static PyMemberDef ETContext_members[] = 
 static PyMemberDef ETContext_members[] = {
-    {"Index", T_INT, offsetof(ET_CONTEXT,dwIndex), READONLY,
+    {"Index", T_INT, offsetof(ETContextObject,dwIndex), READONLY,
         "dwIndex"},
-    {"Version", T_INT, offsetof(ET_CONTEXT,dwVersion), READONLY,
+    {"Version", T_INT, offsetof(ETContextObject,dwVersion), READONLY,
         "dwVersion"},
-    {"Lock", T_INT, offsetof(ET_CONTEXT,hLock), READONLY,
+    {"Lock", T_INT, offsetof(ETContextObject,hLock), READONLY,
         "hLock"},
-    {"Customer", T_INT, offsetof(ET_CONTEXT,dwCustomer), READONLY,
+    {"Customer", T_INT, offsetof(ETContextObject,dwCustomer), READONLY,
         "dwCustomer"},
-    {"Id", T_STRING, offsetof(ET_CONTEXT,bID), READONLY,
+    {"Id", T_STRING, offsetof(ETContextObject,bID), READONLY,
         "bId"},
-    {"ATR", T_STRING, offsetof(ET_CONTEXT,bAtr), READONLY,
+    {"ATR", T_STRING, offsetof(ETContextObject,bAtr), READONLY,
         "bAtr"},
     {NULL}  //Sentinel
 };
@@ -185,7 +120,7 @@ static PyTypeObject ETContextType = {
     0,                         /* tp_alloc */
     ETContext_new,                 /* tp_new */
 #else
-    PyObject_HEAD_INIT(NULL)
+    PyVarObject_HEAD_INIT(NULL,0)
     "pyet199.ETContext",//const char *tp_name; /* For printing, in format "<module>.<name>" */
     sizeof(ETContextObject),0,//Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
     /* Methods to implement standard operations */
@@ -271,6 +206,81 @@ static PyTypeObject ETContextType = {
 #endif
 #endif //
 };
+
+static void
+ETContext_dealloc(ETContextObject* self)
+{
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+static PyObject *
+ETContext_new(PyTypeObject *type)
+{
+    ETContextObject *self;
+    self = PyObject_New(ETContextObject, &ETContextType);
+    //(ETContextObject *)type->tp_alloc(type, 0);
+    //memset(&self->etContext,0,sizeof(ET_CONTEXT));
+    return (PyObject *)self;
+}
+
+static int
+ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
+{
+    char *pzId=NULL,*pzAtr=NULL;
+    int lId=0,lAtr=0;
+    static char *kwlist[] = {"dwIndex","dwVersion","hLock","dwCustomer","bAtr","bID",NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiis#s#", kwlist, 
+                                      &self->dwIndex,
+                                      &self->dwVersion,
+                                      &self->hLock,
+                                      &self->dwCustomer,
+                                      &pzAtr,&lAtr,
+                                      &pzId,&lId))
+        return -1; 
+    if(pzId!=NULL && lId!=MAX_ID_LEN){
+      INVALID_PARAMS("Length of ID must be 8!",-1);
+    }
+    memcpy(self->bID,pzId,MAX_ID_LEN);
+    if(pzAtr!=NULL && lAtr>MAX_ATR_LEN){
+      INVALID_PARAMS("Length of Atr must not be longer than 16!",-1);
+    }
+    memcpy(self->bAtr,pzAtr,lAtr);
+    return 0;
+}
+
+
+static PyObject *
+ETContext_get(ETContextObject* self, PyObject *args)
+{
+    static PyObject *format = NULL;
+    PyObject *result;
+/*
+    if (format == NULL) {
+        format = PyString_FromString("%s %s");
+        if (format == NULL)
+            return NULL;
+    }
+
+    if (self->first == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "first");
+        return NULL;
+    }
+
+    if (self->last == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "last");
+        return NULL;
+    }
+
+    args = Py_BuildValue("OO", self->first, self->last);
+    if (args == NULL)
+        return NULL;
+
+    result = PyString_Format(format, args);
+    Py_DECREF(args);
+*/    
+    return result;
+}
+
 /*********************************************************************************************************************/
 #ifdef NODDY_TEST
 typedef struct {

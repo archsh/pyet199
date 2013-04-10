@@ -1,4 +1,5 @@
 #!/usr/bin/env python
 import pyet199
 
-pyet199.ETEnum()
+ctx = pyet199.ETContext(dwIndex=2)
+print ctx
