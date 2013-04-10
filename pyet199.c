@@ -36,19 +36,12 @@ static PyObject *NormalError;
 
 typedef struct {
     PyObject_HEAD
-    DWORD dwIndex;
-    DWORD dwVersion;
-    DWORD dwCustomer;
-    DWORD hLock;
-    BYTE  bID[MAX_ID_LEN];
-    BYTE  bAtr[MAX_ATR_LEN];
-    DWORD dwAtrLen;
-    //ET_CONTEXT etContext;
+    ET_CONTEXT context;
 }ETContextObject;
 
 static void ETContext_dealloc(ETContextObject* self);
 
-static PyObject *ETContext_new(PyTypeObject *type);
+static PyObject *ETContext_new();
 
 PyDoc_STRVAR(ETContext_init__doc__,"");
 static int ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds);
@@ -88,18 +81,6 @@ static PyObject *ETContext_gen_rsa_key(ETContextObject* self, PyObject *args);
 
 //static PyMemberDef ETContext_members[] = 
 static PyMemberDef ETContext_members[] = {
-    {"Index", T_INT, offsetof(ETContextObject,dwIndex), READONLY,
-        "dwIndex"},
-    {"Version", T_INT, offsetof(ETContextObject,dwVersion), READONLY,
-        "dwVersion"},
-    {"Lock", T_INT, offsetof(ETContextObject,hLock), READONLY,
-        "hLock"},
-    {"Customer", T_INT, offsetof(ETContextObject,dwCustomer), READONLY,
-        "dwCustomer"},
-    {"Id", T_STRING, offsetof(ETContextObject,bID), READONLY,
-        "bId"},
-    {"ATR", T_STRING, offsetof(ETContextObject,bAtr), READONLY,
-        "bAtr"},
     {NULL}  //Sentinel
 };
 
@@ -171,43 +152,14 @@ ETContext_dealloc(ETContextObject* self)
 }
 
 static PyObject *
-ETContext_new(PyTypeObject *type)
+ETContext_new()
 {
     ETContextObject *self;
     self = PyObject_New(ETContextObject, &ETContextType);
     if (self == NULL)
         return NULL;
+    memset(&self->context,0,sizeof(ET_CONTEXT));
     return (PyObject*)self;
-}
-
-static int
-PyETContext2ETCONTEXT(ETContextObject *pEtcObj, ET_CONTEXT *pETC){
-  if(NULL == pEtcObj || NULL == pETC)
-    return -1;
-  pETC->dwIndex = pEtcObj->dwIndex;
-  pETC->dwVersion = pEtcObj->dwVersion;
-  pETC->dwCustomer = pEtcObj->dwCustomer;
-  pETC->dwAtrLen = pEtcObj->dwAtrLen;
-  pETC->hLock = pEtcObj->hLock;
-  pETC->dwIndex = pEtcObj->dwIndex;
-  memcpy(pETC->bID,pEtcObj->bID,MAX_ID_LEN);
-  memcpy(pETC->bAtr,pEtcObj->bAtr,MAX_ATR_LEN);
-  return 0;
-}
-
-static int
-ETCONTEXT2PyETContext(ET_CONTEXT *pETC,ETContextObject *pEtcObj){
-  if(NULL == pEtcObj || NULL == pETC)
-    return -1;
-  pEtcObj->dwIndex = pETC->dwIndex;
-  pEtcObj->dwVersion = pETC->dwVersion;
-  pEtcObj->dwCustomer = pETC->dwCustomer;
-  pEtcObj->dwAtrLen = pETC->dwAtrLen;
-  pEtcObj->hLock = pETC->hLock;
-  pEtcObj->dwIndex = pETC->dwIndex;
-  memcpy(pEtcObj->bID,pETC->bID,MAX_ID_LEN);
-  memcpy(pEtcObj->bAtr,pETC->bAtr,MAX_ATR_LEN);
-  return 0;
 }
 
 static int
@@ -217,36 +169,62 @@ ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
     int lId=0,lAtr=0;
     static char *kwlist[] = {"dwIndex","dwVersion","hLock","dwCustomer","bAtr","bID",NULL};
     if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiis#s#", kwlist, 
-                                      &self->dwIndex,
-                                      &self->dwVersion,
-                                      &self->hLock,
-                                      &self->dwCustomer,
+                                      &self->context.dwIndex,
+                                      &self->context.dwVersion,
+                                      &self->context.hLock,
+                                      &self->context.dwCustomer,
                                       &pzAtr,&lAtr,
                                       &pzId,&lId))
         return -1; 
     if(pzId!=NULL && lId!=MAX_ID_LEN){
       INVALID_PARAMS("Length of ID must be 8!",-1);
     }
-    memcpy(self->bID,pzId,MAX_ID_LEN);
+    memcpy(self->context.bID,pzId,MAX_ID_LEN);
     if(pzAtr!=NULL && lAtr>MAX_ATR_LEN){
       INVALID_PARAMS("Length of Atr must not be longer than 16!",-1);
     }
-    memcpy(self->bAtr,pzAtr,lAtr);
+    memcpy(self->context.bAtr,pzAtr,lAtr);
     return 0;
 }
 
 static PyObject *
 ETContext_open(ETContextObject* self, PyObject *args)
 {
-    PyObject *result;
-    return result;
+    DWORD dwRet;
+    ET_OPENINFO OpenInfo;
+    PyObject *pyOpenInfo=NULL;
+    if (!PyArg_ParseTuple(args, "|O", &pyOpenInfo)) {
+      return NULL;
+    }
+    if(NULL != pyOpenInfo){
+      //printf("PyTuple_Check(pyOpenInfo)=%d\n",PyTuple_Check(pyOpenInfo));
+      //printf("PyTuple_Size(pyOpenInfo)=%d\n",PyTuple_Size(pyOpenInfo));
+      //printf("PyInt_Check(PyTuple_GetItem(pyOpenInfo,0)=%d\n",PyInt_Check(PyTuple_GetItem(pyOpenInfo,0)));
+      //printf("PyInt_Check(PyTuple_GetItem(pyOpenInfo,1))=%d\n",PyInt_Check(PyTuple_GetItem(pyOpenInfo,1)));
+      if(0==PyTuple_Check(pyOpenInfo) 
+        || 2!=PyTuple_Size(pyOpenInfo)
+        || 0==PyInt_Check(PyTuple_GetItem(pyOpenInfo,0))
+        || 0==PyInt_Check(PyTuple_GetItem(pyOpenInfo,1))){
+        INVALID_PARAMS("Open Info must be a tuple with 2 integers.",NULL);
+      }
+      OpenInfo.dwOpenInfoSize=PyInt_AsUnsignedLongMask(PyTuple_GetItem(pyOpenInfo,0));
+      OpenInfo.dwShareMode=PyInt_AsUnsignedLongMask(PyTuple_GetItem(pyOpenInfo,1));
+      //printf("OpenInfo: %08x,%08x\n",OpenInfo.dwOpenInfoSize,OpenInfo.dwShareMode);
+      dwRet= ETOpenEx(&self->context,&OpenInfo);
+    }else{
+      dwRet = ETOpen(&self->context);
+    }
+    DWRET_VALIDATE(dwRet,NULL);
+    return self;
 }
 
 static PyObject *
 ETContext_close(ETContextObject* self, PyObject *args)
 {
-    PyObject *result;
-    return result;
+    DWORD dwRet;
+    dwRet = ETClose(&self->context);
+    DWRET_VALIDATE(dwRet,NULL);
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -348,7 +326,7 @@ static PyObject *pETEnum(PyObject *self){
     NORMAL_ERROR(dwRet,NULL);
   }
   for(i=0;i<keyCount;i++){
-    PyObject *dict = PyDict_New();
+    ETContextObject *etcontext = (ETContextObject*)ETContext_new();
     ET_CONTEXT *pETC = &pETContextList[i];
     /*
     DWORD dwOut=0;
@@ -358,15 +336,8 @@ static PyObject *pETEnum(PyObject *self){
     dwRet = ETControl(pETC,ET_GET_DEVICE_ATR,NULL,0,pETC->bAtr,16,&pETC->dwAtrLen);
     dwRet = ETControl(pETC,ET_GET_CUSTOMER_NAME,NULL,0,&pETC->dwCustomer,4,&dwOut);
     */
-    PyDict_SetItemString (dict, "Index", Py_BuildValue("i",pETContextList[i].dwIndex));
-    PyDict_SetItemString (dict, "Version", Py_BuildValue("i",pETContextList[i].dwVersion));
-    PyDict_SetItemString (dict, "Lock", Py_BuildValue("i",pETContextList[i].hLock));
-    PyDict_SetItemString (dict, "reserve", Py_BuildValue("s",pETContextList[i].reserve));
-    PyDict_SetItemString (dict, "Customer", Py_BuildValue("i",pETContextList[i].dwCustomer));
-    PyDict_SetItemString (dict, "Atr", PyByteArray_FromStringAndSize(pETContextList[i].bAtr,pETC->dwAtrLen));
-    PyDict_SetItemString (dict, "AtrLen", Py_BuildValue("i",pETContextList[i].dwAtrLen));
-    PyDict_SetItemString (dict, "ID", PyByteArray_FromStringAndSize(pETContextList[i].bID,8));
-    PyList_Append(result, dict);
+    memcpy(&etcontext->context,pETC,sizeof(ET_CONTEXT));
+    PyList_Append(result, etcontext);
     /*
     dwRet = ETClose(pETC);
     */
