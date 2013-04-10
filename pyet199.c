@@ -50,9 +50,41 @@ static void ETContext_dealloc(ETContextObject* self);
 
 static PyObject *ETContext_new(PyTypeObject *type);
 
+PyDoc_STRVAR(ETContext_init__doc__,"");
 static int ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds);
 
-static PyObject *ETContext_get(ETContextObject* self, PyObject *args);
+PyDoc_STRVAR(ETContext_open__doc__,"");
+static PyObject *ETContext_open(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_close__doc__,"");
+static PyObject *ETContext_close(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_control__doc__,"");
+static PyObject *ETContext_control(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_create_dir__doc__,"");
+static PyObject *ETContext_create_dir(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_change_dir__doc__,"");
+static PyObject *ETContext_change_dir(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_erase_dir__doc__,"");
+static PyObject *ETContext_erase_dir(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_verify_pin__doc__,"");
+static PyObject *ETContext_verify_pin(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_create_file__doc__,"");
+static PyObject *ETContext_create_file(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_write_file__doc__,"");
+static PyObject *ETContext_write_file(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_execute__doc__,"");
+static PyObject *ETContext_execute(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_gen_rsa_key__doc__,"");
+static PyObject *ETContext_gen_rsa_key(ETContextObject* self, PyObject *args);
 
 //static PyMemberDef ETContext_members[] = 
 static PyMemberDef ETContext_members[] = {
@@ -72,9 +104,17 @@ static PyMemberDef ETContext_members[] = {
 };
 
 static PyMethodDef ETContext_methods[] = {
-    {"get", (PyCFunction)ETContext_get, METH_VARARGS,
-     "get variable from instance."
-    },
+    {"open", (PyCFunction)ETContext_open, METH_VARARGS,ETContext_open__doc__},
+    {"close", (PyCFunction)ETContext_close, METH_VARARGS,ETContext_close__doc__},
+    {"control", (PyCFunction)ETContext_control, METH_VARARGS,ETContext_control__doc__},
+    {"create_dir", (PyCFunction)ETContext_create_dir, METH_VARARGS,ETContext_create_dir__doc__},
+    {"change_dir", (PyCFunction)ETContext_change_dir, METH_VARARGS,ETContext_change_dir__doc__},
+    {"erase_dir", (PyCFunction)ETContext_erase_dir, METH_VARARGS,ETContext_erase_dir__doc__},
+    {"verify_pin", (PyCFunction)ETContext_verify_pin, METH_VARARGS,ETContext_verify_pin__doc__},
+    {"create_file", (PyCFunction)ETContext_create_file, METH_VARARGS,ETContext_create_file__doc__},
+    {"write_file", (PyCFunction)ETContext_write_file, METH_VARARGS,ETContext_write_file__doc__},
+    {"execute", (PyCFunction)ETContext_execute, METH_VARARGS,ETContext_execute__doc__},
+    {"gen_rsa_key", (PyCFunction)ETContext_gen_rsa_key, METH_VARARGS,ETContext_gen_rsa_key__doc__},
     {NULL}  /* Sentinel */
 };
 
@@ -141,6 +181,36 @@ ETContext_new(PyTypeObject *type)
 }
 
 static int
+PyETContext2ETCONTEXT(ETContextObject *pEtcObj, ET_CONTEXT *pETC){
+  if(NULL == pEtcObj || NULL == pETC)
+    return -1;
+  pETC->dwIndex = pEtcObj->dwIndex;
+  pETC->dwVersion = pEtcObj->dwVersion;
+  pETC->dwCustomer = pEtcObj->dwCustomer;
+  pETC->dwAtrLen = pEtcObj->dwAtrLen;
+  pETC->hLock = pEtcObj->hLock;
+  pETC->dwIndex = pEtcObj->dwIndex;
+  memcpy(pETC->bID,pEtcObj->bID,MAX_ID_LEN);
+  memcpy(pETC->bAtr,pEtcObj->bAtr,MAX_ATR_LEN);
+  return 0;
+}
+
+static int
+ETCONTEXT2PyETContext(ET_CONTEXT *pETC,ETContextObject *pEtcObj){
+  if(NULL == pEtcObj || NULL == pETC)
+    return -1;
+  pEtcObj->dwIndex = pETC->dwIndex;
+  pEtcObj->dwVersion = pETC->dwVersion;
+  pEtcObj->dwCustomer = pETC->dwCustomer;
+  pEtcObj->dwAtrLen = pETC->dwAtrLen;
+  pEtcObj->hLock = pETC->hLock;
+  pEtcObj->dwIndex = pETC->dwIndex;
+  memcpy(pEtcObj->bID,pETC->bID,MAX_ID_LEN);
+  memcpy(pEtcObj->bAtr,pETC->bAtr,MAX_ATR_LEN);
+  return 0;
+}
+
+static int
 ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
 {
     char *pzId=NULL,*pzAtr=NULL;
@@ -165,36 +235,88 @@ ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+static PyObject *
+ETContext_open(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_close(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_control(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_create_dir(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_change_dir(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_erase_dir(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_verify_pin(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_create_file(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_write_file(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_execute(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
+static PyObject *
+ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
+{
+    PyObject *result;
+    return result;
+}
+
 
 static PyObject *
 ETContext_get(ETContextObject* self, PyObject *args)
 {
-    static PyObject *format = NULL;
     PyObject *result;
-/*
-    if (format == NULL) {
-        format = PyString_FromString("%s %s");
-        if (format == NULL)
-            return NULL;
-    }
-
-    if (self->first == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "first");
-        return NULL;
-    }
-
-    if (self->last == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "last");
-        return NULL;
-    }
-
-    args = Py_BuildValue("OO", self->first, self->last);
-    if (args == NULL)
-        return NULL;
-
-    result = PyString_Format(format, args);
-    Py_DECREF(args);
-*/    
     return result;
 }
 
@@ -487,30 +609,6 @@ static PyObject *pETGenRsaKey(PyObject *self, PyObject *args){
 static PyMethodDef methods[] = {
   { "ETEnum", (PyCFunction)pETEnum, METH_NOARGS,
       "ETEnum: " },
-  { "ETOpen", (PyCFunction)pETOpen, METH_VARARGS,
-      "ETOpen: " },
-  { "ETClose", (PyCFunction)pETClose, METH_VARARGS,
-      "ETClose: " },
-  { "ETControl", (PyCFunction)pETControl, METH_VARARGS,
-      "ETControl: " },
-  { "ETCreateDir", (PyCFunction)pETCreateDir, METH_VARARGS,
-      "ETCreateDir: " },
-  { "ETChangeDir", (PyCFunction)pETChangeDir, METH_VARARGS,
-      "ETChangeDir: " },
-  { "ETEraseDir", (PyCFunction)pETEraseDir, METH_VARARGS,
-      "ETEraseDir: " },
-  { "ETVerifyPin", (PyCFunction)pETVerifyPin, METH_VARARGS,
-      "ETVerifyPin: " },
-  { "ETChangePin", (PyCFunction)pETChangePin, METH_VARARGS,
-      "ETChangePin: " },
-  { "ETWriteFile", (PyCFunction)pETWriteFile, METH_VARARGS,
-      "ETWriteFile: " },
-  { "ETExecute", (PyCFunction)pETExecute, METH_VARARGS,
-      "ETExecute: " },
-  { "ETCreateFile", (PyCFunction)pETCreateFile, METH_VARARGS,
-      "ETCreateFile: " },
-  { "ETGenRsaKey", (PyCFunction)pETGenRsaKey, METH_VARARGS,
-      "ETGenRsaKey: " },
   { NULL, NULL, 0, NULL }
 };
 
