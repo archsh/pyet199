@@ -67,6 +67,9 @@ static PyObject *ETContext_erase_dir(ETContextObject* self, PyObject *args);
 PyDoc_STRVAR(ETContext_verify_pin__doc__,"");
 static PyObject *ETContext_verify_pin(ETContextObject* self, PyObject *args);
 
+PyDoc_STRVAR(ETContext_change_pin__doc__,"");
+static PyObject *ETContext_change_pin(ETContextObject *self, PyObject *args);
+
 PyDoc_STRVAR(ETContext_create_file__doc__,"");
 static PyObject *ETContext_create_file(ETContextObject* self, PyObject *args);
 
@@ -92,6 +95,7 @@ static PyMethodDef ETContext_methods[] = {
     {"change_dir", (PyCFunction)ETContext_change_dir, METH_VARARGS,ETContext_change_dir__doc__},
     {"erase_dir", (PyCFunction)ETContext_erase_dir, METH_VARARGS,ETContext_erase_dir__doc__},
     {"verify_pin", (PyCFunction)ETContext_verify_pin, METH_VARARGS,ETContext_verify_pin__doc__},
+    {"change_pin", (PyCFunction)ETContext_change_pin, METH_VARARGS,ETContext_change_pin__doc__},
     {"create_file", (PyCFunction)ETContext_create_file, METH_VARARGS,ETContext_create_file__doc__},
     {"write_file", (PyCFunction)ETContext_write_file, METH_VARARGS,ETContext_write_file__doc__},
     {"execute", (PyCFunction)ETContext_execute, METH_VARARGS,ETContext_execute__doc__},
@@ -230,6 +234,17 @@ ETContext_close(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_control(ETContextObject* self, PyObject *args)
 {
+    /*
+    DWORD WINAPI ETControl(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      DWORD       dwCtlCode,
+        IN      CONST VOID      *pInBuffer,
+        IN      DWORD       dwInBufferLen,
+        OUT     VOID        *pOutBuffer,
+        IN      DWORD       dwOutBufferLen,
+        OUT     DWORD       *pdwBytesReturned
+    );
+    */
     PyObject *result;
     return result;
 }
@@ -237,6 +252,14 @@ ETContext_control(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_create_dir(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETCreateDir(
+        IN      CONST ET_CONTEXT    *pETCtx,
+        IN      LPCSTR        lpszDirID,
+        IN      DWORD       dwDirSize,
+        IN      DWORD       dwFlags
+    );
+  */
     PyObject *result;
     return result;
 }
@@ -244,6 +267,19 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_change_dir(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETChangeDir(
+        IN      CONST ET_CONTEXT    *pETCtx,
+        IN      LPCSTR        lpszPath
+    );
+  DWORD WINAPI ETCreateDirEx(
+        IN    CONST ET_CONTEXT  *pETCtx,
+        IN    LPCSTR              lpszDirID,
+        IN    DWORD               dwDirSize,
+        IN    DWORD               dwFlags,
+        IN    CONST ET_CREATEDIRINFO  *pCreateDirInfo
+    );
+  */
     PyObject *result;
     return result;
 }
@@ -251,13 +287,45 @@ ETContext_change_dir(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_erase_dir(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETEraseDir(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      LPCSTR        lpszDirID
+    );
+  */
     PyObject *result;
     return result;
 }
 
 static PyObject *
+ETContext_change_pin(ETContextObject *self, PyObject *args)
+{
+  /*
+  DWORD WINAPI ETChangePin(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      CONST BYTE      *pbOldPin,
+        IN      DWORD       dwOldPinLen,
+        IN      CONST BYTE      *pbNewPin,
+        IN      DWORD       dwNewPinLen,
+        IN      DWORD       dwPinType,
+        IN    BYTE        byPinTryCount
+    );
+  */
+  PyObject *result;
+  return result;
+}
+
+static PyObject *
 ETContext_verify_pin(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETVerifyPin(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      CONST BYTE          *pbPin,
+        IN      DWORD       dwPinLen,
+        IN      DWORD       dwPinType
+    );
+  */
     PyObject *result;
     return result;
 }
@@ -265,6 +333,14 @@ ETContext_verify_pin(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_create_file(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETCreateFile(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      LPCSTR        lpszFileID,
+        IN      DWORD       dwFileSize,
+        IN      BYTE        bFileType
+    );
+  */
     PyObject *result;
     return result;
 }
@@ -272,6 +348,26 @@ ETContext_create_file(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_write_file(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETWriteFile(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      LPCSTR        lpszFileID,
+        IN      DWORD       dwOffset,
+        IN      CONST VOID      *pBuffer,
+        IN      DWORD       dwBufferSize
+    );
+  DWORD WINAPI ETWriteFileEx(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      LPCSTR        lpszFileID,
+        IN      DWORD       dwOffset,
+        IN      CONST VOID          *pBuffer,
+        IN      DWORD       dwBufferSize,
+        IN      DWORD       dwFileSize,
+        OUT     DWORD       *pdwBytesWritten,
+        IN      DWORD       dwFlags,
+        IN      BYTE        bFileType
+    );
+  */
     PyObject *result;
     return result;
 }
@@ -279,6 +375,17 @@ ETContext_write_file(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_execute(ETContextObject* self, PyObject *args)
 {
+  /*
+  DWORD WINAPI ETExecute(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      LPCSTR        lpszFileID,
+        IN      CONST VOID      *pInBuffer,
+        IN      DWORD       dwInbufferSize,
+        OUT     VOID        *pOutBuffer,
+        IN      DWORD       dwOutBufferSize,
+        OUT     DWORD       *pdwBytesReturned
+    );
+  */
     PyObject *result;
     return result;
 }
@@ -286,14 +393,19 @@ ETContext_execute(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
 {
-    PyObject *result;
-    return result;
-}
-
-
-static PyObject *
-ETContext_get(ETContextObject* self, PyObject *args)
-{
+  /*
+  DWORD WINAPI ETGenRsaKey(
+    IN    CONST ET_CONTEXT  *pETCtx,
+    IN    WORD        wKeySize,
+    IN    DWORD       dwE,
+    IN    LPCSTR        lpszPubFileID,
+    IN    LPCSTR        lpszPriFileID,
+    OUT   PVOID       pbPubKeyData,
+    IN OUT  DWORD       *dwPubKeyDataSize,
+    OUT   PVOID       pbPriKeyData,
+    IN OUT  DWORD       *dwPriKeyDataSize
+  );
+  */
     PyObject *result;
     return result;
 }
@@ -305,7 +417,7 @@ ETContext_get(ETContextObject* self, PyObject *args)
  * Args: No.
  * Return: A list of ETContext objects. NONE if no ET199 was connected or failed.
  */
-static PyObject *pETEnum(PyObject *self){
+static PyObject *pyETEnum(PyObject *self){
   /** Get connected keys*/
   DWORD keyCount=0,dwRet=0;
   int i=0;
@@ -347,239 +459,10 @@ static PyObject *pETEnum(PyObject *self){
   return result;
 }
 
-/**
- * Open an ET199 key.
- * Args:
- *  ETContext object which returned from ETEnum. -> @ref: ETOpen
- *  ETOpenInfo: optional argument for open with specific mode. -> @ref: ETOpenEx
- * Return: ETContext object or None for failure.
- */
-static PyObject *pETOpen(PyObject *self, PyObject *args){
-  PyObject *pETCtxObj=NULL;
-  ET_OPENINFO pOpenInfo={0,0};
-  if (!PyArg_ParseTuple(args, "O|ii", &pETCtxObj,&pOpenInfo.dwOpenInfoSize,&pOpenInfo.dwShareMode)) {
-    return NULL;
-  }
-  
-  //Py_RETURN_NONE;
-  return pETCtxObj;
-}
-
-/**
- * Close an opened ET199 key.
- * Args: ETContext object of opened.
- * Return: True or False for failure.
- */
-static PyObject *pETClose(PyObject *self, PyObject *args){
-  /*(
-        IN OUT  ET_CONTEXT			*pETCtx
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Send Control command to an ET199 key.
- * Args:
- *    ETContext object of opened.
- *    
- * Return:
- */
-static PyObject *pETControl(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      DWORD				dwCtlCode,
-        IN      CONST VOID			*pInBuffer,
-        IN      DWORD				dwInBufferLen,
-        OUT     VOID				*pOutBuffer,
-        IN      DWORD				dwOutBufferLen,
-        OUT     DWORD				*pdwBytesReturned
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Create a directory
- * Args:
- *   ETContext object of opened.
- *   dirId:
- *   dirSize:
- *   flags:
- *   dirInfo:   -> @ref: pETCreateDirEx
- * Return:
- */
-static PyObject *pETCreateDir(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT    *pETCtx,
-        IN      LPCSTR				lpszDirID,
-        IN      DWORD				dwDirSize,
-        IN      DWORD				dwFlags
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Change current working directory
- * Args:
- *    ETContext object of opened.
- *    dirPath:
- * Return:
- */
-static PyObject *pETChangeDir(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT    *pETCtx,
-        IN      LPCSTR				lpszPath
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Erase a directory.
- * Args:
- *    ETContext object of opened.
- *    dirPath:
- * Return:
- */
-static PyObject *pETEraseDir(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      LPCSTR				lpszDirID
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Verify Pin
- * Args:
- *    ETContext object of opened.
- *    pin
- *    pinType
- * Return:
- */
-static PyObject *pETVerifyPin(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      CONST BYTE          *pbPin,
-        IN      DWORD				dwPinLen,
-        IN      DWORD				dwPinType
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Change Pin
- * Args:
- *    ETContext object of opened.
- *    oldPin,
- *    newPin,
- *    pinType,
- *    pinTryCount,
- * Return:
- */
-static PyObject *pETChangePin(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      CONST BYTE			*pbOldPin,
-        IN      DWORD				dwOldPinLen,
-        IN      CONST BYTE			*pbNewPin,
-        IN      DWORD				dwNewPinLen,
-        IN      DWORD				dwPinType,
-        IN		BYTE				byPinTryCount
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Write file to ET199 key.
- * Args:
- *    ETContext object of opened.
- *    fileId,
- *    offset,
- *    data,
- *    flags,   -> @ref: ETWriteFileEx
- *    filetype,-> @ref: ETWriteFileEx
- * Return:
- */
-static PyObject *pETWriteFile(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      LPCSTR				lpszFileID,
-        IN      DWORD				dwOffset,
-        IN      CONST VOID			*pBuffer,
-        IN      DWORD				dwBufferSize
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Execute a program in ET199 key.
- * Args:
- *     ETContext object of opened.
- *     fileId
- *     inputData
- * Return:
- */
-static PyObject *pETExecute(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      LPCSTR				lpszFileID,
-        IN      CONST VOID			*pInBuffer,
-        IN      DWORD				dwInbufferSize,
-        OUT     VOID				*pOutBuffer,
-        IN      DWORD				dwOutBufferSize,
-        OUT     DWORD				*pdwBytesReturned
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Create a file.
- * Args:
- *    ETContext object of opened.
- *    fileId:
- *    fileSize:
- *    fileType:
- * Return:
- */
-static PyObject *pETCreateFile(PyObject *self, PyObject *args){
-  /*(
-        IN      CONST ET_CONTEXT	*pETCtx,
-        IN      LPCSTR				lpszFileID,
-        IN      DWORD				dwFileSize,
-        IN      BYTE				bFileType
-    );*/
-  Py_RETURN_NONE;
-}
-
-/**
- * Generate RSA Key.
- * Args:
- *    ETContext object of opened.
- *    keySize:
- *    eVal:
- *    pubFileId:
- *    priFileId:
- * Return:
- *    (pubKeyData,priKeyData) -> tuple with bytearrays. Or None for failure.
- */
-static PyObject *pETGenRsaKey(PyObject *self, PyObject *args){
-  /*(
-        IN		CONST ET_CONTEXT	*pETCtx,
-        IN		WORD				wKeySize,
-        IN		DWORD				dwE,
-        IN		LPCSTR				lpszPubFileID,
-        IN		LPCSTR				lpszPriFileID,
-        OUT		PVOID				pbPubKeyData,
-        IN OUT	DWORD				*dwPubKeyDataSize,
-        OUT		PVOID				pbPriKeyData,
-        IN OUT	DWORD				*dwPriKeyDataSize
-    );*/
-  Py_RETURN_NONE;
-}
-
 /***************************************************************************************************************************/
 static PyMethodDef methods[] = {
-  { "ETEnum", (PyCFunction)pETEnum, METH_NOARGS,
-      "ETEnum: " },
+  { "Enumerate", (PyCFunction)pyETEnum, METH_NOARGS,
+      "Enumerate connected ET199 keys. Return a list of ETContext objects." },
   { NULL, NULL, 0, NULL }
 };
 
