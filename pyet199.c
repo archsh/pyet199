@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <structmember.h>
+#include <datetime.h>
 #include "ET199_32.h"
 #define _STR(x) #x
 #define STR(x)  _STR(x)
@@ -217,10 +218,10 @@ ETContext_open(ETContextObject* self, PyObject *args)
       //printf("PyTuple_Size(pyOpenInfo)=%d\n",PyTuple_Size(pyOpenInfo));
       //printf("PyInt_Check(PyTuple_GetItem(pyOpenInfo,0)=%d\n",PyInt_Check(PyTuple_GetItem(pyOpenInfo,0)));
       //printf("PyInt_Check(PyTuple_GetItem(pyOpenInfo,1))=%d\n",PyInt_Check(PyTuple_GetItem(pyOpenInfo,1)));
-      if(0==PyTuple_Check(pyOpenInfo) 
+      if(!PyTuple_Check(pyOpenInfo) 
         || 2!=PyTuple_Size(pyOpenInfo)
-        || 0==PyInt_Check(PyTuple_GetItem(pyOpenInfo,0))
-        || 0==PyInt_Check(PyTuple_GetItem(pyOpenInfo,1))){
+        || !PyInt_Check(PyTuple_GetItem(pyOpenInfo,0))
+        || !PyInt_Check(PyTuple_GetItem(pyOpenInfo,1))){
         INVALID_PARAMS("Open Info must be a tuple with 2 integers.",NULL);
       }
       OpenInfo.dwOpenInfoSize=PyInt_AsUnsignedLongMask(PyTuple_GetItem(pyOpenInfo,0));
@@ -246,17 +247,6 @@ ETContext_close(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_ctrl_led(ETContextObject* self, PyObject *args)
 {
-    /*
-    DWORD WINAPI ETControl(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      DWORD       dwCtlCode,
-        IN      CONST VOID      *pInBuffer,
-        IN      DWORD       dwInBufferLen,
-        OUT     VOID        *pOutBuffer,
-        IN      DWORD       dwOutBufferLen,
-        OUT     DWORD       *pdwBytesReturned
-    );
-    */
     DWORD onoff=0,wink=0,dwRet;
     if (!PyArg_ParseTuple(args, "i|i", &onoff,&wink)) {
       return NULL;
@@ -281,21 +271,10 @@ ETContext_ctrl_led(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_ctrl_get(ETContextObject* self, PyObject *args)
 {
-    /*
-    DWORD WINAPI ETControl(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      DWORD       dwCtlCode,
-        IN      CONST VOID      *pInBuffer,
-        IN      DWORD       dwInBufferLen,
-        OUT     VOID        *pOutBuffer,
-        IN      DWORD       dwOutBufferLen,
-        OUT     DWORD       *pdwBytesReturned
-    );
-    */
     DWORD ctrlcode=0,dwRet;
     BYTE *fileId;
-    DWORD fileIdLen=0;
-    BYTE  outBuffer[256]={0};
+    DWORD fileIdLen=0,i;
+    BYTE  outBuffer[256]={0},*pTmp;
     DWORD bytesReturned=0;
     PET_MANUFACTURE_DATE pManuDate=NULL;
     PEFINFO pFileInfo=NULL;
@@ -303,17 +282,7 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i|s#", &ctrlcode,&fileId,&fileIdLen)) {
       return NULL;
     }
-    #if 0
-    #define   ET_GET_DEVICE_TYPE					0x00000011                      /** 获得设备类型*/
-    #define   ET_GET_SERIAL_NUMBER					0x00000012                      /** 获取硬件序列号*/
-    #define   ET_GET_DEVICE_USABLE_SPACE			0x00000013                      /** 获得设备空间大小*/
-    #define   ET_GET_DEVICE_ATR						0x00000014                      /** 获得设备ATR*/
-    #define   ET_GET_CUSTOMER_NAME					0x00000015                      /** 获得客户号*/
-    #define   ET_GET_MANUFACTURE_DATE				0x00000016                      /** 获得生产日期*/
-    #define   ET_GET_DF_AVAILABLE_SPACE				0x00000017                      /** 获得当前目录的剩余空间*/
-    #define   ET_GET_EF_INFO						0x00000018                      /** 获得指定文件信息*/
-    #define   ET_GET_COS_VERSION					0x00000019						/** 获得COS版本信息*/
-    #endif
+
     switch(ctrlcode){
         case ET_GET_DEVICE_TYPE:
             dwRet = ETControl(&self->context,ET_GET_DEVICE_TYPE,NULL,0,outBuffer,1,&bytesReturned);
@@ -325,7 +294,7 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_SERIAL_NUMBER,NULL,0,outBuffer,9,&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-7] as String
-            return Py_BuildValue("s#",outBuffer,8);
+            return PyByteArray_FromStringAndSize(outBuffer,8);
             break;
         case ET_GET_DEVICE_USABLE_SPACE:
             dwRet = ETControl(&self->context,ET_GET_DEVICE_USABLE_SPACE,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
@@ -337,32 +306,34 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_DEVICE_ATR,NULL,0,outBuffer,17,&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-15] as String
-            return Py_BuildValue("s#",outBuffer,16);
+            return PyByteArray_FromStringAndSize(outBuffer,16);
             break;
         case ET_GET_CUSTOMER_NAME:
             dwRet = ETControl(&self->context,ET_GET_CUSTOMER_NAME,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-3] as DWORD
-            return Py_BuildValue("i",*(DWORD*)outBuffer);
+            return Py_BuildValue("I",*(DWORD*)outBuffer);
             break;
         case ET_GET_MANUFACTURE_DATE:
             pManuDate=(PET_MANUFACTURE_DATE)outBuffer;
             dwRet = ETControl(&self->context,ET_GET_MANUFACTURE_DATE,NULL,0,outBuffer,sizeof(ET_MANUFACTURE_DATE),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return pManuDate as DateTime
-            return PyDateTime_FromDateAndTime(2000+pManuDate->byYear,
+            pyRet = PyDateTime_FromDateAndTime(2000+pManuDate->byYear,
                                               pManuDate->byMonth,
                                               pManuDate->byDay,
                                               pManuDate->byHour,
                                               pManuDate->byMinute,
                                               pManuDate->bySecond,
                                               0);
+            Py_INCREF(pyRet);
+            return pyRet;
             break;
         case ET_GET_DF_AVAILABLE_SPACE:
             dwRet = ETControl(&self->context,ET_GET_DF_AVAILABLE_SPACE,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-1] as WORD
-            return Py_BuildValue("i",*(WORD*)outBuffer);
+            return Py_BuildValue("H",*(WORD*)outBuffer);
             break;
         case ET_GET_EF_INFO:
             pFileInfo=(PEFINFO)outBuffer;
@@ -376,13 +347,14 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             PyDict_SetItemString(pyRet,"wFileID",PyInt_FromLong(pFileInfo->wFileID));
             PyDict_SetItemString(pyRet,"bFileType",PyInt_FromLong(pFileInfo->bFileType));
             PyDict_SetItemString(pyRet,"wFileSize",PyInt_FromLong(pFileInfo->wFileSize));
+            Py_INCREF(pyRet);
             return pyRet;
             break;
         case ET_GET_COS_VERSION:
             dwRet = ETControl(&self->context,ET_GET_COS_VERSION,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-1] as WORD
-            return Py_BuildValue("i",*(WORD*)outBuffer);
+            return Py_BuildValue("H",*(WORD*)outBuffer);
             break;
         default:
             INVALID_PARAMS("param must between ET_GET_DEVICE_TYPE - ET_GET_COS_VERSION!",NULL);
@@ -396,119 +368,176 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_ctrl_set(ETContextObject* self, PyObject *args)
 {
-    /*
-    DWORD WINAPI ETControl(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      DWORD       dwCtlCode,
-        IN      CONST VOID      *pInBuffer,
-        IN      DWORD       dwInBufferLen,
-        OUT     VOID        *pOutBuffer,
-        IN      DWORD       dwOutBufferLen,
-        OUT     DWORD       *pdwBytesReturned
-    );
-    */
-    PyObject *result;
-    return result;
+    DWORD ctrlcode=0,dwRet,dwOut,len;
+    BYTE  buffer[24]={0};
+    PyObject *pyParam=NULL;
+    if (!PyArg_ParseTuple(args, "i|O", &ctrlcode,&pyParam)) {
+      return NULL;
+    }
+    switch(ctrlcode){
+      case ET_SET_DEVICE_ATR:
+        if(NULL == pyParam || !PyByteArray_Check(pyParam)){
+          INVALID_PARAMS("ATR should provide must be a bytearray!",NULL);
+        }
+        len = PyByteArray_Size(pyParam);
+        if(len>16 || len<1){
+          INVALID_PARAMS("ATR length must between 1~16!",NULL);
+        }
+        dwRet = ETControl(&self->context,ET_SET_DEVICE_ATR,PyByteArray_AsString(pyParam),len,NULL,0,&dwOut);
+        DWRET_VALIDATE(dwRet,NULL);
+        break;
+      case ET_SET_DEVICE_TYPE:
+        if(NULL == pyParam || !PyInt_Check(pyParam)){
+          INVALID_PARAMS("Param should be an integer.",NULL);
+        }
+        dwRet = PyInt_AsUnsignedLongMask(pyParam);
+        if(dwRet!=ET_DEVICE_TYPE_PKI || dwRet!=ET_DEVICE_TYPE_DONGLE || dwRet!=ET_DEVICE_TYPE_EMPTY){
+          INVALID_PARAMS("Device type should be 1,2 or 4!",NULL);
+        }
+        buffer[0] = dwRet;
+        dwRet = ETControl(&self->context,ET_SET_DEVICE_ATR,buffer,1,NULL,0,&dwOut);
+        DWRET_VALIDATE(dwRet,NULL);
+        break;
+      case ET_SET_SHELL_KEY:
+        if(NULL == pyParam || !PyByteArray_Check(pyParam)){
+          INVALID_PARAMS("Shell key should provide must be a bytearray!",NULL);
+        }
+        len = PyByteArray_Size(pyParam);
+        if(len>8 || len<1){
+          INVALID_PARAMS("ATR length must between 1~8!",NULL);
+        }
+        dwRet = ETControl(&self->context,ET_SET_SHELL_KEY,PyByteArray_AsString(pyParam),len,NULL,0,&dwOut);
+        DWRET_VALIDATE(dwRet,NULL);
+        break;
+      case ET_SET_CUSTOMER_NAME:
+        if(NULL == pyParam || !PyByteArray_Check(pyParam)){
+          INVALID_PARAMS("Customer name should provide must be a bytearray!",NULL);
+        }
+        len = PyByteArray_Size(pyParam);
+        if(len>250 || len<1){
+          INVALID_PARAMS("ATR length must between 1~250!",NULL);
+        }
+        dwRet = ETControl(&self->context,ET_SET_CUSTOMER_NAME,PyByteArray_AsString(pyParam),len,NULL,0,&dwOut);
+        DWRET_VALIDATE(dwRet,NULL);
+        break;
+      default:
+        INVALID_PARAMS("param must between ET_SET_DEVICE_ATR - ET_SET_CUSTOMER_NAME!",NULL);
+        break;
+    }
+    Py_RETURN_NONE;
 }
 
 
 static PyObject *
 ETContext_ctrl_reset(ETContextObject* self, PyObject *args)
 {
-    /*
-    DWORD WINAPI ETControl(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      DWORD       dwCtlCode,
-        IN      CONST VOID      *pInBuffer,
-        IN      DWORD       dwInBufferLen,
-        OUT     VOID        *pOutBuffer,
-        IN      DWORD       dwOutBufferLen,
-        OUT     DWORD       *pdwBytesReturned
-    );
-    */
-    PyObject *result;
-    return result;
+  DWORD dwRet,dwOut;
+  dwRet = ETControl(&self->context,ET_RESET_DEVICE,NULL,0,NULL,0,&dwOut);
+  DWRET_VALIDATE(dwRet,NULL);
+  Py_RETURN_NONE;
 }
 
 static PyObject *
 ETContext_create_dir(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETCreateDir(
-        IN      CONST ET_CONTEXT    *pETCtx,
-        IN      LPCSTR        lpszDirID,
-        IN      DWORD       dwDirSize,
-        IN      DWORD       dwFlags
-    );
-  */
-    PyObject *result;
-    return result;
+  BYTE *pszDirId=NULL;
+  DWORD dwRet,dwDirSize,dwFlags=ET_CREATE_ROOT_DIR;
+  ET_CREATEDIRINFO createInfo={0};
+  PyObject *pyDirInfo=NULL,*pyAtr=NULL;
+  if(!PyArg_ParseTuple(args, "s#I|IO", &pszDirId,&dwDirSize,&dwFlags,&pyDirInfo)) {
+    return NULL;
+  }
+  if(NULL != pyDirInfo){
+    if(!PyTuple_Check(pyDirInfo) 
+        || 2!=PyTuple_Size(pyDirInfo)
+        || !PyInt_Check(PyTuple_GetItem(pyDirInfo,0))
+        || !PyByteArray_Check(PyTuple_GetItem(pyDirInfo,1))){
+      INVALID_PARAMS("DirInfo should be a tuple with one integer and one bytearray!",NULL);
+    }
+    pyAtr = PyTuple_GetItem(pyDirInfo,1);
+    dwRet = PyByteArray_Size(pyAtr);
+    if(dwRet>16 || dwRet<1){
+      INVALID_PARAMS("ATR length must between 1~16!",NULL);
+    }
+    createInfo.dwCreateDirInfoSize = PyInt_AsUnsignedLongMask(PyTuple_GetItem(pyDirInfo,0));
+    memcpy(createInfo.szAtr,PyByteArray_AsString(pyAtr),dwRet);
+    dwRet = ETCreateDirEx(&self->context,pszDirId,dwDirSize,dwFlags,&createInfo);
+    DWRET_VALIDATE(dwRet,NULL);
+  }else{
+    dwRet = ETCreateDir(&self->context,pszDirId,dwDirSize,dwFlags);
+    DWRET_VALIDATE(dwRet,NULL);
+  }
+  
+  Py_RETURN_NONE;
 }
 
 static PyObject *
 ETContext_change_dir(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETChangeDir(
-        IN      CONST ET_CONTEXT    *pETCtx,
-        IN      LPCSTR        lpszPath
-    );
-  DWORD WINAPI ETCreateDirEx(
-        IN    CONST ET_CONTEXT  *pETCtx,
-        IN    LPCSTR              lpszDirID,
-        IN    DWORD               dwDirSize,
-        IN    DWORD               dwFlags,
-        IN    CONST ET_CREATEDIRINFO  *pCreateDirInfo
-    );
-  */
-    PyObject *result;
-    return result;
+  BYTE  *pszPath=NULL;
+  DWORD dwRet,len;
+  if(!PyArg_ParseTuple(args, "s#", &pszPath,&len)) {
+    return NULL;
+  }
+  if(len!=4){
+    INVALID_PARAMS("Not a valid path!",NULL);
+  }
+  dwRet = ETChangeDir(&self->context,pszPath);
+  DWRET_VALIDATE(dwRet,NULL);
+  Py_RETURN_NONE;
 }
 
 static PyObject *
 ETContext_erase_dir(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETEraseDir(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      LPCSTR        lpszDirID
-    );
-  */
-    PyObject *result;
-    return result;
+  BYTE  *pszPath=NULL;
+  DWORD dwRet,len;
+  if(!PyArg_ParseTuple(args, "s#", &pszPath,&len)) {
+    return NULL;
+  }
+  if(len!=4){
+    INVALID_PARAMS("Not a valid path!",NULL);
+  }
+  dwRet = ETEraseDir(&self->context,pszPath);
+  DWRET_VALIDATE(dwRet,NULL);
+  Py_RETURN_NONE;
 }
 
 static PyObject *
 ETContext_change_pin(ETContextObject *self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETChangePin(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      CONST BYTE      *pbOldPin,
-        IN      DWORD       dwOldPinLen,
-        IN      CONST BYTE      *pbNewPin,
-        IN      DWORD       dwNewPinLen,
-        IN      DWORD       dwPinType,
-        IN    BYTE        byPinTryCount
-    );
-  */
-  PyObject *result;
-  return result;
+  BYTE  *pbOldPin=NULL;
+  BYTE  *pbNewPin=NULL;
+  BYTE  byPinTryCount=0xFF;
+  DWORD dwRet,dwOldPinLen,dwNewPinLen,dwPinType;
+  if(!PyArg_ParseTuple(args, "s#s#Ic", &pbOldPin,&dwOldPinLen,
+                                       &pbNewPin,&dwNewPinLen,
+                                       &dwPinType,&byPinTryCount)) {
+    return NULL;
+  }
+  dwRet = ETChangePin(&self->context,pbOldPin,dwOldPinLen,pbNewPin,dwNewPinLen,dwPinType,byPinTryCount);
+  DWRET_VALIDATE(dwRet,NULL);
+  Py_RETURN_NONE;
 }
 
 static PyObject *
 ETContext_verify_pin(ETContextObject* self, PyObject *args)
 {
+  BYTE *pbPin=NULL;
+  DWORD dwPinLen,dwPinType,dwRet;
+  if(!PyArg_ParseTuple(args, "s#I", &pbPin,&dwPinLen,&dwPinType)) {
+    return NULL;
+  }
+  dwRet = ETVerifyPin(&self->context,pbPin,dwPinLen,dwPinType);
   /*
-  DWORD WINAPI ETVerifyPin(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      CONST BYTE          *pbPin,
-        IN      DWORD       dwPinLen,
-        IN      DWORD       dwPinType
-    );
+  if(ET_S_SUCCESS == dwRet){
+    Py_RETURN_TRUE;
+  }else if(dwRet&0xF0000C00){
+    Py_RETURN_FALSE;
+  }
   */
-    PyObject *result;
-    return result;
+  DWRET_VALIDATE(dwRet,NULL);
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -522,8 +551,7 @@ ETContext_create_file(ETContextObject* self, PyObject *args)
         IN      BYTE        bFileType
     );
   */
-    PyObject *result;
-    return result;
+  Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -549,8 +577,7 @@ ETContext_write_file(ETContextObject* self, PyObject *args)
         IN      BYTE        bFileType
     );
   */
-    PyObject *result;
-    return result;
+  Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -567,8 +594,7 @@ ETContext_execute(ETContextObject* self, PyObject *args)
         OUT     DWORD       *pdwBytesReturned
     );
   */
-    PyObject *result;
-    return result;
+  Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -587,8 +613,7 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
     IN OUT  DWORD       *dwPriKeyDataSize
   );
   */
-    PyObject *result;
-    return result;
+  Py_RETURN_NONE;
 }
 
 /*********************************************************************************************************************/
