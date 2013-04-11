@@ -564,63 +564,75 @@ ETContext_create_file(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_write_file(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETWriteFile(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      LPCSTR        lpszFileID,
-        IN      DWORD       dwOffset,
-        IN      CONST VOID      *pBuffer,
-        IN      DWORD       dwBufferSize
-    );
-  DWORD WINAPI ETWriteFileEx(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      LPCSTR        lpszFileID,
-        IN      DWORD       dwOffset,
-        IN      CONST VOID          *pBuffer,
-        IN      DWORD       dwBufferSize,
-        IN      DWORD       dwFileSize,
-        OUT     DWORD       *pdwBytesWritten,
-        IN      DWORD       dwFlags,
-        IN      BYTE        bFileType
-    );
-  */
+  BYTE *lpszFileID=NULL,*pBuffer=NULL,bFileType;
+  DWORD dwRet,dwFileIDLen,dwOffset,dwBufferSize,dwFileSize=0,dwFlags,dwBytesWritten;
+  if(!PyArg_ParseTuple(args, "s#Is#|III", &lpszFileID,&dwFileIDLen,&dwOffset,&pBuffer,&dwBufferSize,&dwFileSize,&dwFlags,&dwRet)) {
+    return NULL;
+  }
+  if(4!=dwFileIDLen){
+    INVALID_PARAMS("Invalid File Id!",NULL);
+  }
+  if(dwFileSize>0){
+    bFileType = dwRet;
+    dwRet = ETWriteFileEx(&self->context,lpszFileID,dwOffset,pBuffer,dwBufferSize,dwFileSize,&dwBytesWritten,dwFlags,bFileType);
+    DWRET_VALIDATE(dwRet,NULL);
+    return Py_BuildValue("i",dwBytesWritten);
+  }else{
+    dwRet = ETWriteFile(&self->context,lpszFileID,dwOffset,pBuffer,dwBufferSize);
+    DWRET_VALIDATE(dwRet,NULL);
+  }
   Py_RETURN_TRUE;
 }
 
 static PyObject *
 ETContext_execute(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETExecute(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      LPCSTR        lpszFileID,
-        IN      CONST VOID      *pInBuffer,
-        IN      DWORD       dwInbufferSize,
-        OUT     VOID        *pOutBuffer,
-        IN      DWORD       dwOutBufferSize,
-        OUT     DWORD       *pdwBytesReturned
-    );
-  */
-  Py_RETURN_NONE;
+  BYTE *lpszFileID=NULL,*pInBuffer=NULL,bFileType,OutBuffer[256];
+  DWORD dwRet,dwFileIDLen,dwInbufferSize,dwBytesReturned;
+  if(!PyArg_ParseTuple(args, "s#z#", &lpszFileID,&dwFileIDLen,&pInBuffer,&dwInbufferSize)) {
+    return NULL;
+  }
+  if(4!=dwFileIDLen){
+    INVALID_PARAMS("Invalid File Id!",NULL);
+  }
+  dwRet = ETExecute(&self->context,lpszFileID,pInBuffer,dwInbufferSize,OutBuffer,256,&dwBytesReturned);
+  DWRET_VALIDATE(dwRet,NULL);
+  return PyByteArray_FromStringAndSize(OutBuffer,dwBytesReturned);
 }
 
 static PyObject *
 ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETGenRsaKey(
-    IN    CONST ET_CONTEXT  *pETCtx,
-    IN    WORD        wKeySize,
-    IN    DWORD       dwE,
-    IN    LPCSTR        lpszPubFileID,
-    IN    LPCSTR        lpszPriFileID,
-    OUT   PVOID       pbPubKeyData,
-    IN OUT  DWORD       *dwPubKeyDataSize,
-    OUT   PVOID       pbPriKeyData,
-    IN OUT  DWORD       *dwPriKeyDataSize
-  );
-  */
-  Py_RETURN_NONE;
+  PyObject *pyRet=NULL;
+  WORD wKeySize;
+  DWORD dwRet,dwE,dwPubKeyDataSize=2120,dwPriKeyDataSize=2120;
+  BYTE *lpszPubFileID=NULL,*lpszPriFileID=NULL,pbPubKeyData[2120],pbPriKeyData[2120];
+  DWORD pubFileIdLen,priFileIdLen;
+  if(!PyArg_ParseTuple(args,"HIs#s#", 
+                            &wKeySize,
+                            &dwE,
+                            &lpszPubFileID,&pubFileIdLen,
+                            &lpszPriFileID,&priFileIdLen)) {
+    return NULL;
+  }
+  if(4!=pubFileIdLen || 4!=priFileIdLen){
+    INVALID_PARAMS("Invalid File Id!",NULL);
+  }
+  dwRet = ETGenRsaKey(&self->context,
+                      wKeySize,
+                      dwE,
+                      lpszPubFileID,
+                      lpszPriFileID,
+                      pbPubKeyData,
+                      &dwPubKeyDataSize,
+                      pbPriKeyData,
+                      &dwPriKeyDataSize);
+  DWRET_VALIDATE(dwRet,NULL);
+  pyRet = PyTuple_New(2);
+  PyTuple_SetItem(pyRet,0,PyByteArray_FromStringAndSize(pbPubKeyData,dwPubKeyDataSize));
+  PyTuple_SetItem(pyRet,1,PyByteArray_FromStringAndSize(pbPriKeyData,dwPriKeyDataSize));
+  Py_INCREF(pyRet);
+  return pyRet;
 }
 
 /*********************************************************************************************************************/
