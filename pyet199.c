@@ -241,7 +241,7 @@ ETContext_close(ETContextObject* self, PyObject *args)
     DWORD dwRet;
     dwRet = ETClose(&self->context);
     DWRET_VALIDATE(dwRet,NULL);
-    Py_RETURN_NONE;
+    Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -264,7 +264,7 @@ ETContext_ctrl_led(ETContextObject* self, PyObject *args)
         }
     }
     
-    Py_RETURN_NONE;
+    Py_RETURN_TRUE;
 }
 
 
@@ -424,7 +424,7 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
         INVALID_PARAMS("param must between ET_SET_DEVICE_ATR - ET_SET_CUSTOMER_NAME!",NULL);
         break;
     }
-    Py_RETURN_NONE;
+    Py_RETURN_TRUE;
 }
 
 
@@ -434,7 +434,7 @@ ETContext_ctrl_reset(ETContextObject* self, PyObject *args)
   DWORD dwRet,dwOut;
   dwRet = ETControl(&self->context,ET_RESET_DEVICE,NULL,0,NULL,0,&dwOut);
   DWRET_VALIDATE(dwRet,NULL);
-  Py_RETURN_NONE;
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -468,7 +468,7 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
     DWRET_VALIDATE(dwRet,NULL);
   }
   
-  Py_RETURN_NONE;
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -484,7 +484,7 @@ ETContext_change_dir(ETContextObject* self, PyObject *args)
   }
   dwRet = ETChangeDir(&self->context,pszPath);
   DWRET_VALIDATE(dwRet,NULL);
-  Py_RETURN_NONE;
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -500,7 +500,7 @@ ETContext_erase_dir(ETContextObject* self, PyObject *args)
   }
   dwRet = ETEraseDir(&self->context,pszPath);
   DWRET_VALIDATE(dwRet,NULL);
-  Py_RETURN_NONE;
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -510,14 +510,15 @@ ETContext_change_pin(ETContextObject *self, PyObject *args)
   BYTE  *pbNewPin=NULL;
   BYTE  byPinTryCount=0xFF;
   DWORD dwRet,dwOldPinLen,dwNewPinLen,dwPinType;
-  if(!PyArg_ParseTuple(args, "s#s#Ic", &pbOldPin,&dwOldPinLen,
+  if(!PyArg_ParseTuple(args, "s#s#II", &pbOldPin,&dwOldPinLen,
                                        &pbNewPin,&dwNewPinLen,
-                                       &dwPinType,&byPinTryCount)) {
+                                       &dwPinType,&dwRet)) {
     return NULL;
   }
+  byPinTryCount = dwRet;
   dwRet = ETChangePin(&self->context,pbOldPin,dwOldPinLen,pbNewPin,dwNewPinLen,dwPinType,byPinTryCount);
   DWRET_VALIDATE(dwRet,NULL);
-  Py_RETURN_NONE;
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -534,6 +535,8 @@ ETContext_verify_pin(ETContextObject* self, PyObject *args)
     Py_RETURN_TRUE;
   }else if(dwRet&0xF0000C00){
     Py_RETURN_FALSE;
+  }else{
+    DWRET_VALIDATE(dwRet,NULL);
   }
   */
   DWRET_VALIDATE(dwRet,NULL);
@@ -543,15 +546,19 @@ ETContext_verify_pin(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_create_file(ETContextObject* self, PyObject *args)
 {
-  /*
-  DWORD WINAPI ETCreateFile(
-        IN      CONST ET_CONTEXT  *pETCtx,
-        IN      LPCSTR        lpszFileID,
-        IN      DWORD       dwFileSize,
-        IN      BYTE        bFileType
-    );
-  */
-  Py_RETURN_NONE;
+  BYTE *lpszFileID=NULL;
+  DWORD dwRet,lpszFileIDLen,dwFileSize;
+  BYTE  bFileType;
+  if(!PyArg_ParseTuple(args, "s#II", &lpszFileID,&lpszFileIDLen,&dwFileSize,&dwRet)) {
+    return NULL;
+  }
+  if(lpszFileIDLen!=4){
+    INVALID_PARAMS("Invalid File Id!",NULL);
+  }
+  bFileType=dwRet;
+  dwRet = ETCreateFile(&self->context,lpszFileID,dwFileSize,bFileType);
+  DWRET_VALIDATE(dwRet,NULL);
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
@@ -577,7 +584,7 @@ ETContext_write_file(ETContextObject* self, PyObject *args)
         IN      BYTE        bFileType
     );
   */
-  Py_RETURN_NONE;
+  Py_RETURN_TRUE;
 }
 
 static PyObject *
