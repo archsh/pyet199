@@ -52,8 +52,17 @@ static PyObject *ETContext_open(ETContextObject* self, PyObject *args);
 PyDoc_STRVAR(ETContext_close__doc__,"");
 static PyObject *ETContext_close(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_control__doc__,"");
-static PyObject *ETContext_control(ETContextObject* self, PyObject *args);
+PyDoc_STRVAR(ETContext_ctrl_led__doc__,"Control the LED of key: True=on, False=off, num=wink.");
+static PyObject *ETContext_ctrl_led(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_ctrl_get__doc__,"");
+static PyObject *ETContext_ctrl_get(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_ctrl_set__doc__,"");
+static PyObject *ETContext_ctrl_set(ETContextObject* self, PyObject *args);
+
+PyDoc_STRVAR(ETContext_ctrl_reset__doc__,"");
+static PyObject *ETContext_ctrl_reset(ETContextObject* self, PyObject *args);
 
 PyDoc_STRVAR(ETContext_create_dir__doc__,"");
 static PyObject *ETContext_create_dir(ETContextObject* self, PyObject *args);
@@ -90,7 +99,10 @@ static PyMemberDef ETContext_members[] = {
 static PyMethodDef ETContext_methods[] = {
     {"open", (PyCFunction)ETContext_open, METH_VARARGS,ETContext_open__doc__},
     {"close", (PyCFunction)ETContext_close, METH_VARARGS,ETContext_close__doc__},
-    {"control", (PyCFunction)ETContext_control, METH_VARARGS,ETContext_control__doc__},
+    {"ctrl_led", (PyCFunction)ETContext_ctrl_led, METH_VARARGS,ETContext_ctrl_led__doc__},
+    {"ctrl_get", (PyCFunction)ETContext_ctrl_get, METH_VARARGS,ETContext_ctrl_get__doc__},
+    {"ctrl_set", (PyCFunction)ETContext_ctrl_set, METH_VARARGS,ETContext_ctrl_set__doc__},
+    {"ctrl_reset", (PyCFunction)ETContext_ctrl_reset, METH_VARARGS,ETContext_ctrl_reset__doc__},
     {"create_dir", (PyCFunction)ETContext_create_dir, METH_VARARGS,ETContext_create_dir__doc__},
     {"change_dir", (PyCFunction)ETContext_change_dir, METH_VARARGS,ETContext_change_dir__doc__},
     {"erase_dir", (PyCFunction)ETContext_erase_dir, METH_VARARGS,ETContext_erase_dir__doc__},
@@ -232,7 +244,176 @@ ETContext_close(ETContextObject* self, PyObject *args)
 }
 
 static PyObject *
-ETContext_control(ETContextObject* self, PyObject *args)
+ETContext_ctrl_led(ETContextObject* self, PyObject *args)
+{
+    /*
+    DWORD WINAPI ETControl(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      DWORD       dwCtlCode,
+        IN      CONST VOID      *pInBuffer,
+        IN      DWORD       dwInBufferLen,
+        OUT     VOID        *pOutBuffer,
+        IN      DWORD       dwOutBufferLen,
+        OUT     DWORD       *pdwBytesReturned
+    );
+    */
+    DWORD onoff=0,wink=0,dwRet;
+    if (!PyArg_ParseTuple(args, "i|i", &onoff,&wink)) {
+      return NULL;
+    }
+    if(wink>0){
+        dwRet = ETControl(&self->context,ET_LED_WINK,&wink,sizeof(wink),NULL,NULL,NULL);
+        DWRET_VALIDATE(dwRet,NULL);
+    }else{
+        if(onoff){
+            dwRet = ETControl(&self->context,ET_LED_UP,NULL,0,NULL,0,NULL);
+            DWRET_VALIDATE(dwRet,NULL);
+        }else{
+            dwRet = ETControl(&self->context,ET_LED_DOWN,NULL,0,NULL,0,NULL);
+            DWRET_VALIDATE(dwRet,NULL);
+        }
+    }
+    
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+ETContext_ctrl_get(ETContextObject* self, PyObject *args)
+{
+    /*
+    DWORD WINAPI ETControl(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      DWORD       dwCtlCode,
+        IN      CONST VOID      *pInBuffer,
+        IN      DWORD       dwInBufferLen,
+        OUT     VOID        *pOutBuffer,
+        IN      DWORD       dwOutBufferLen,
+        OUT     DWORD       *pdwBytesReturned
+    );
+    */
+    DWORD ctrlcode=0,dwRet;
+    BYTE *fileId;
+    DWORD fileIdLen=0;
+    BYTE  outBuffer[256]={0};
+    DWORD bytesReturned=0;
+    PET_MANUFACTURE_DATE pManuDate=NULL;
+    PEFINFO pFileInfo=NULL;
+    PyObject *pyRet=NULL;
+    if (!PyArg_ParseTuple(args, "i|s#", &ctrlcode,&fileId,&fileIdLen)) {
+      return NULL;
+    }
+    #if 0
+    #define   ET_GET_DEVICE_TYPE					0x00000011                      /** 获得设备类型*/
+    #define   ET_GET_SERIAL_NUMBER					0x00000012                      /** 获取硬件序列号*/
+    #define   ET_GET_DEVICE_USABLE_SPACE			0x00000013                      /** 获得设备空间大小*/
+    #define   ET_GET_DEVICE_ATR						0x00000014                      /** 获得设备ATR*/
+    #define   ET_GET_CUSTOMER_NAME					0x00000015                      /** 获得客户号*/
+    #define   ET_GET_MANUFACTURE_DATE				0x00000016                      /** 获得生产日期*/
+    #define   ET_GET_DF_AVAILABLE_SPACE				0x00000017                      /** 获得当前目录的剩余空间*/
+    #define   ET_GET_EF_INFO						0x00000018                      /** 获得指定文件信息*/
+    #define   ET_GET_COS_VERSION					0x00000019						/** 获得COS版本信息*/
+    #endif
+    switch(ctrlcode){
+        case ET_GET_DEVICE_TYPE:
+            dwRet = ETControl(&self->context,ET_GET_DEVICE_TYPE,NULL,0,outBuffer,1,&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0] as ?
+            return Py_BuildValue("i",outBuffer[0]);
+            break;
+        case ET_GET_SERIAL_NUMBER:
+            dwRet = ETControl(&self->context,ET_GET_SERIAL_NUMBER,NULL,0,outBuffer,9,&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0-7] as String
+            return Py_BuildValue("s#",outBuffer,8);
+            break;
+        case ET_GET_DEVICE_USABLE_SPACE:
+            dwRet = ETControl(&self->context,ET_GET_DEVICE_USABLE_SPACE,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0-3] as DWORD
+            return Py_BuildValue("i",*(DWORD*)outBuffer);
+            break;
+        case ET_GET_DEVICE_ATR:
+            dwRet = ETControl(&self->context,ET_GET_DEVICE_ATR,NULL,0,outBuffer,17,&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0-15] as String
+            return Py_BuildValue("s#",outBuffer,16);
+            break;
+        case ET_GET_CUSTOMER_NAME:
+            dwRet = ETControl(&self->context,ET_GET_CUSTOMER_NAME,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0-3] as DWORD
+            return Py_BuildValue("i",*(DWORD*)outBuffer);
+            break;
+        case ET_GET_MANUFACTURE_DATE:
+            pManuDate=(PET_MANUFACTURE_DATE)outBuffer;
+            dwRet = ETControl(&self->context,ET_GET_MANUFACTURE_DATE,NULL,0,outBuffer,sizeof(ET_MANUFACTURE_DATE),&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return pManuDate as DateTime
+            return PyDateTime_FromDateAndTime(2000+pManuDate->byYear,
+                                              pManuDate->byMonth,
+                                              pManuDate->byDay,
+                                              pManuDate->byHour,
+                                              pManuDate->byMinute,
+                                              pManuDate->bySecond,
+                                              0);
+            break;
+        case ET_GET_DF_AVAILABLE_SPACE:
+            dwRet = ETControl(&self->context,ET_GET_DF_AVAILABLE_SPACE,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0-1] as WORD
+            return Py_BuildValue("i",*(WORD*)outBuffer);
+            break;
+        case ET_GET_EF_INFO:
+            pFileInfo=(PEFINFO)outBuffer;
+            if(fileId==NULL || fileIdLen!=4){
+                INVALID_PARAMS("An valid File Id should provide!",NULL);
+            }
+            dwRet = ETControl(&self->context,ET_GET_EF_INFO,fileId,fileIdLen,outBuffer,sizeof(EFINFO),&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return pFileInfo as Dict
+            pyRet = PyDict_New();
+            PyDict_SetItemString(pyRet,"wFileID",PyInt_FromLong(pFileInfo->wFileID));
+            PyDict_SetItemString(pyRet,"bFileType",PyInt_FromLong(pFileInfo->bFileType));
+            PyDict_SetItemString(pyRet,"wFileSize",PyInt_FromLong(pFileInfo->wFileSize));
+            return pyRet;
+            break;
+        case ET_GET_COS_VERSION:
+            dwRet = ETControl(&self->context,ET_GET_COS_VERSION,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
+            DWRET_VALIDATE(dwRet,NULL);
+            //Return outBuffer[0-1] as WORD
+            return Py_BuildValue("i",*(WORD*)outBuffer);
+            break;
+        default:
+            INVALID_PARAMS("param must between ET_GET_DEVICE_TYPE - ET_GET_COS_VERSION!",NULL);
+            break;
+    }
+    
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+ETContext_ctrl_set(ETContextObject* self, PyObject *args)
+{
+    /*
+    DWORD WINAPI ETControl(
+        IN      CONST ET_CONTEXT  *pETCtx,
+        IN      DWORD       dwCtlCode,
+        IN      CONST VOID      *pInBuffer,
+        IN      DWORD       dwInBufferLen,
+        OUT     VOID        *pOutBuffer,
+        IN      DWORD       dwOutBufferLen,
+        OUT     DWORD       *pdwBytesReturned
+    );
+    */
+    PyObject *result;
+    return result;
+}
+
+
+static PyObject *
+ETContext_ctrl_reset(ETContextObject* self, PyObject *args)
 {
     /*
     DWORD WINAPI ETControl(
