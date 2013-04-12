@@ -47,49 +47,49 @@ static PyObject *ETContext_new();
 PyDoc_STRVAR(ETContext_init__doc__,"");
 static int ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds);
 
-PyDoc_STRVAR(ETContext_open__doc__,"");
+PyDoc_STRVAR(ETContext_open__doc__,"open((dwOpenInfoSize,dwShareMode)) -> Open the key for accessing.");
 static PyObject *ETContext_open(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_close__doc__,"");
+PyDoc_STRVAR(ETContext_close__doc__,"close() -> Close the key if it is opened.");
 static PyObject *ETContext_close(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_ctrl_led__doc__,"Control the LED of key: True=on, False=off, num=wink.");
+PyDoc_STRVAR(ETContext_ctrl_led__doc__,"ctrl_led(on/off[,wink]) -> Control the LED of key: True=on, False=off, num=wink.");
 static PyObject *ETContext_ctrl_led(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_ctrl_get__doc__,"");
+PyDoc_STRVAR(ETContext_ctrl_get__doc__,"ctrl_get(code[,fileId]) -> Get information from key. Id,Customer Num, ATR etc...");
 static PyObject *ETContext_ctrl_get(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_ctrl_set__doc__,"");
+PyDoc_STRVAR(ETContext_ctrl_set__doc__,"ctr_set(code[,data]) -> Set information to key.");
 static PyObject *ETContext_ctrl_set(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_ctrl_reset__doc__,"");
+PyDoc_STRVAR(ETContext_ctrl_reset__doc__,"ctrl_reset() -> Reset connected key.");
 static PyObject *ETContext_ctrl_reset(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_create_dir__doc__,"");
+PyDoc_STRVAR(ETContext_create_dir__doc__,"create_dir(dirId,dirSize[,dirFlags,dirInfo]) -> Create dir.");
 static PyObject *ETContext_create_dir(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_change_dir__doc__,"");
+PyDoc_STRVAR(ETContext_change_dir__doc__,"change_dir(dirId) -> Change current working dir.");
 static PyObject *ETContext_change_dir(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_erase_dir__doc__,"");
+PyDoc_STRVAR(ETContext_erase_dir__doc__,"erase_dir(dirId) -> Erase a dir.");
 static PyObject *ETContext_erase_dir(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_verify_pin__doc__,"");
+PyDoc_STRVAR(ETContext_verify_pin__doc__,"verify_pin(pin,pintype) -> Verify pin.");
 static PyObject *ETContext_verify_pin(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_change_pin__doc__,"");
+PyDoc_STRVAR(ETContext_change_pin__doc__,"change_pin(oldPin,newPin,pinType[,tryCount=0xff]) -> Change pin.");
 static PyObject *ETContext_change_pin(ETContextObject *self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_create_file__doc__,"");
+PyDoc_STRVAR(ETContext_create_file__doc__,"create_file(fileId,fileSize,fileType) -> Create file.");
 static PyObject *ETContext_create_file(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_write_file__doc__,"");
+PyDoc_STRVAR(ETContext_write_file__doc__,"write_file(fileId,offset,data[,fileSize,flags,fileType]) -> Write data to a file.");
 static PyObject *ETContext_write_file(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_execute__doc__,"");
+PyDoc_STRVAR(ETContext_execute__doc__,"execute(fileId,inputData) -> Execute a program in key.");
 static PyObject *ETContext_execute(ETContextObject* self, PyObject *args);
 
-PyDoc_STRVAR(ETContext_gen_rsa_key__doc__,"");
+PyDoc_STRVAR(ETContext_gen_rsa_key__doc__,"gen_rsa_key(keySize,e,pubFileId,priFileId) -> Generate a key pair.");
 static PyObject *ETContext_gen_rsa_key(ETContextObject* self, PyObject *args);
 
 //static PyMemberDef ETContext_members[] = 
@@ -236,7 +236,7 @@ ETContext_open(ETContextObject* self, PyObject *args)
 }
 
 static PyObject *
-ETContext_close(ETContextObject* self, PyObject *args)
+ETContext_close(ETContextObject* self)
 {
     DWORD dwRet;
     dwRet = ETClose(&self->context);
@@ -441,7 +441,7 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
 
 
 static PyObject *
-ETContext_ctrl_reset(ETContextObject* self, PyObject *args)
+ETContext_ctrl_reset(ETContextObject* self)
 {
   DWORD dwRet,dwOut;
   dwRet = ETControl(&self->context,ET_RESET_DEVICE,NULL,0,NULL,0,&dwOut);
@@ -667,7 +667,7 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
 
 /*********************************************************************************************************************/
 
-PyDoc_STRVAR(pyETEnum__doc__,"Enumerate connected ET199 keys. Return a list of ETContext objects.");
+PyDoc_STRVAR(pyETEnum__doc__,"Enumerate() -> Enumerate connected ET199 keys. Return a list of ETContext objects.");
 /**
  * Enumerate connected ET199 devices.  -> @ref: ETEnum
  * Args: No.
@@ -715,26 +715,9 @@ static PyObject *pyETEnum(PyObject *self){
   return result;
 }
 
-static PyObject *Testing(PyObject *self,PyObject *args){
-  PyObject *dt = NULL;
-  int year=2013,month=4,day=12,hour=9,minute=8,second=15,usec=123;
-  if(!PyArg_ParseTuple(args,"|iiiiiii", 
-                            &year,&month,&day,&hour,&minute,&second,&usec)) {
-    return NULL;
-  }
-  printf("%d-%d-%d %d:%d:%d.%d",year,month,day,hour,minute,second,usec);
-  //return Py_BuildValue("O&",PyDateTime_FromDateAndTime,(year,month,day,hour,minute,second,usec));
-  //dt = PyDate_FromDate(year,month,day);
-  dt = PyDateTime_FromDateAndTime(year,month,day,hour,minute,second,usec);
-  Py_DECREF(dt);
-  return dt;
-  Py_RETURN_NONE;
-}
-
 /***************************************************************************************************************************/
 static PyMethodDef methods[] = {
   { "Enumerate", (PyCFunction)pyETEnum, METH_NOARGS,pyETEnum__doc__},
-  { "Testing", (PyCFunction)Testing, METH_VARARGS,"Testing"},
   { NULL, NULL, 0, NULL }
 };
 
