@@ -411,7 +411,7 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
           INVALID_PARAMS("Param should be an integer.",NULL);
         }
         dwRet = PyInt_AsUnsignedLongMask(pyParam);
-        if(dwRet!=ET_DEVICE_TYPE_PKI || dwRet!=ET_DEVICE_TYPE_DONGLE || dwRet!=ET_DEVICE_TYPE_EMPTY){
+        if(dwRet!=ET_DEVICE_TYPE_PKI && dwRet!=ET_DEVICE_TYPE_DONGLE && dwRet!=ET_DEVICE_TYPE_EMPTY){
           INVALID_PARAMS("Device type should be 1,2 or 4!",NULL);
         }
         buffer[0] = dwRet;
@@ -530,7 +530,7 @@ ETContext_change_pin(ETContextObject *self, PyObject *args)
   BYTE  *pbNewPin=NULL;
   BYTE  byPinTryCount=0xFF;
   DWORD dwRet,dwOldPinLen,dwNewPinLen,dwPinType;
-  if(!PyArg_ParseTuple(args, "s#s#II", &pbOldPin,&dwOldPinLen,
+  if(!PyArg_ParseTuple(args, "s#s#I|B", &pbOldPin,&dwOldPinLen,
                                        &pbNewPin,&dwNewPinLen,
                                        &dwPinType,&dwRet)) {
     return NULL;
