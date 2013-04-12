@@ -272,14 +272,15 @@ static PyObject *
 ETContext_ctrl_get(ETContextObject* self, PyObject *args)
 {
     DWORD ctrlcode=0,dwRet;
-    BYTE *fileId;
+    BYTE  bFileId[5]={0};
+    WORD  wFileId=0;
     DWORD fileIdLen=0,i;
     BYTE  outBuffer[256]={0},*pTmp;
     DWORD bytesReturned=0;
     PET_MANUFACTURE_DATE pManuDate=NULL;
     PEFINFO pFileInfo=NULL;
     PyObject *pyRet=NULL;
-    if (!PyArg_ParseTuple(args, "i|s#", &ctrlcode,&fileId,&fileIdLen)) {
+    if (!PyArg_ParseTuple(args, "i|H", &ctrlcode,&wFileId)) {
       return NULL;
     }
 
@@ -349,26 +350,17 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             break;
         case ET_GET_EF_INFO:
             pFileInfo=(PEFINFO)outBuffer;
-            if(fileId==NULL || fileIdLen!=4){
+            if(bFileId==0){
                 INVALID_PARAMS("An valid File Id should provide!",NULL);
             }
-            dwRet = ETControl(&self->context,ET_GET_EF_INFO,fileId,fileIdLen,outBuffer,sizeof(EFINFO),&bytesReturned);
+            sprintf(bFileId,"%04x",wFileId);
+            dwRet = ETControl(&self->context,ET_GET_EF_INFO,bFileId,4,outBuffer,sizeof(EFINFO),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return pFileInfo as Dict
-            #if 1
-            sprintf(outBuffer+64,"%04x",pFileInfo->wFileID);
-            return Py_BuildValue("{sssbsI}",
-                                    "wFileID",outBuffer+64,//pFileInfo->wFileID,
+            return Py_BuildValue("{sHsbsI}",
+                                    "wFileID",pFileInfo->wFileID,
                                     "bFileType",pFileInfo->bFileType,
                                     "wFileSize",pFileInfo->wFileSize);
-            #else
-            pyRet = PyDict_New();
-            PyDict_SetItemString(pyRet,"wFileID",PyInt_FromLong(pFileInfo->wFileID));
-            PyDict_SetItemString(pyRet,"bFileType",PyInt_FromLong(pFileInfo->bFileType));
-            PyDict_SetItemString(pyRet,"wFileSize",PyInt_FromLong(pFileInfo->wFileSize));
-            Py_INCREF(pyRet);
-            return pyRet;
-            #endif
             break;
         case ET_GET_COS_VERSION:
             dwRet = ETControl(&self->context,ET_GET_COS_VERSION,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
@@ -460,13 +452,15 @@ ETContext_ctrl_reset(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_create_dir(ETContextObject* self, PyObject *args)
 {
-  BYTE *pszDirId=NULL;
+  BYTE pszDirId[5]={0};
+  WORD dirId=0;
   DWORD dwRet,dwDirSize,dwFlags=ET_CREATE_ROOT_DIR;
   ET_CREATEDIRINFO createInfo={0};
   PyObject *pyDirInfo=NULL,*pyAtr=NULL;
-  if(!PyArg_ParseTuple(args, "s#I|IO", &pszDirId,&dwDirSize,&dwFlags,&pyDirInfo)) {
+  if(!PyArg_ParseTuple(args, "HI|IO", &dirId,&dwDirSize,&dwFlags,&pyDirInfo)) {
     return NULL;
   }
+  sprintf(pszDirId,"%04x",dirId);
   if(NULL != pyDirInfo){
     if(!PyTuple_Check(pyDirInfo) 
         || 2!=PyTuple_Size(pyDirInfo)
@@ -494,14 +488,16 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_change_dir(ETContextObject* self, PyObject *args)
 {
-  BYTE  *pszPath=NULL;
-  DWORD dwRet,len;
-  if(!PyArg_ParseTuple(args, "s#", &pszPath,&len)) {
+  BYTE  pszPath[5]={0};
+  WORD  wPath;
+  DWORD dwRet;
+  if(!PyArg_ParseTuple(args, "H", &wPath)) {
     return NULL;
   }
-  if(len!=4){
+  if(wPath==0){
     INVALID_PARAMS("Not a valid path!",NULL);
   }
+  sprintf(pszPath,"%04x",wPath);
   dwRet = ETChangeDir(&self->context,pszPath);
   DWRET_VALIDATE(dwRet,NULL);
   Py_RETURN_TRUE;
@@ -510,14 +506,16 @@ ETContext_change_dir(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_erase_dir(ETContextObject* self, PyObject *args)
 {
-  BYTE  *pszPath=NULL;
-  DWORD dwRet,len;
-  if(!PyArg_ParseTuple(args, "s#", &pszPath,&len)) {
+  BYTE  pszPath[5]={0};
+  WORD  wPath;
+  DWORD dwRet;
+  if(!PyArg_ParseTuple(args, "H", &wPath)) {
     return NULL;
   }
-  if(len!=4){
+  if(wPath==0){
     INVALID_PARAMS("Not a valid path!",NULL);
   }
+  sprintf(pszPath,"%04x",wPath);
   dwRet = ETEraseDir(&self->context,pszPath);
   DWRET_VALIDATE(dwRet,NULL);
   Py_RETURN_TRUE;
@@ -566,15 +564,17 @@ ETContext_verify_pin(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_create_file(ETContextObject* self, PyObject *args)
 {
-  BYTE *lpszFileID=NULL;
-  DWORD dwRet,lpszFileIDLen,dwFileSize;
+  BYTE *lpszFileID[5]={0};
+  WORD fileId;
+  DWORD dwRet,dwFileSize;
   BYTE  bFileType;
-  if(!PyArg_ParseTuple(args, "s#II", &lpszFileID,&lpszFileIDLen,&dwFileSize,&dwRet)) {
+  if(!PyArg_ParseTuple(args, "HII", &fileId,&dwFileSize,&dwRet)) {
     return NULL;
   }
-  if(lpszFileIDLen!=4){
+  if(fileId==0){
     INVALID_PARAMS("Invalid File Id!",NULL);
   }
+  sprintf(lpszFileID,"%04x",fileId);
   bFileType=dwRet;
   dwRet = ETCreateFile(&self->context,lpszFileID,dwFileSize,bFileType);
   DWRET_VALIDATE(dwRet,NULL);
@@ -584,14 +584,16 @@ ETContext_create_file(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_write_file(ETContextObject* self, PyObject *args)
 {
-  BYTE *lpszFileID=NULL,*pBuffer=NULL,bFileType;
-  DWORD dwRet,dwFileIDLen,dwOffset,dwBufferSize,dwFileSize=0,dwFlags,dwBytesWritten;
-  if(!PyArg_ParseTuple(args, "s#Is#|III", &lpszFileID,&dwFileIDLen,&dwOffset,&pBuffer,&dwBufferSize,&dwFileSize,&dwFlags,&dwRet)) {
+  BYTE lpszFileID[5]={0},*pBuffer=NULL,bFileType;
+  WORD fileId;
+  DWORD dwRet,dwOffset,dwBufferSize,dwFileSize=0,dwFlags,dwBytesWritten;
+  if(!PyArg_ParseTuple(args, "HIs#|III", &fileId,&dwOffset,&pBuffer,&dwBufferSize,&dwFileSize,&dwFlags,&dwRet)) {
     return NULL;
   }
-  if(4!=dwFileIDLen){
+  if(fileId==0){
     INVALID_PARAMS("Invalid File Id!",NULL);
   }
+  sprintf(lpszFileID,"%04x",fileId);
   if(dwFileSize>0){
     bFileType = dwRet;
     dwRet = ETWriteFileEx(&self->context,lpszFileID,dwOffset,pBuffer,dwBufferSize,dwFileSize,&dwBytesWritten,dwFlags,bFileType);
@@ -607,14 +609,16 @@ ETContext_write_file(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_execute(ETContextObject* self, PyObject *args)
 {
-  BYTE *lpszFileID=NULL,*pInBuffer=NULL,bFileType,OutBuffer[256];
-  DWORD dwRet,dwFileIDLen,dwInbufferSize,dwBytesReturned;
-  if(!PyArg_ParseTuple(args, "s#z#", &lpszFileID,&dwFileIDLen,&pInBuffer,&dwInbufferSize)) {
+  BYTE lpszFileID[5]={0},*pInBuffer=NULL,bFileType,OutBuffer[256];
+  DWORD dwRet,dwInbufferSize,dwBytesReturned;
+  WORD fileId;
+  if(!PyArg_ParseTuple(args, "Hz#", &fileId,&pInBuffer,&dwInbufferSize)) {
     return NULL;
   }
-  if(4!=dwFileIDLen){
+  if(fileId==0){
     INVALID_PARAMS("Invalid File Id!",NULL);
   }
+  sprintf(lpszFileID,"%04x",fileId);
   dwRet = ETExecute(&self->context,lpszFileID,pInBuffer,dwInbufferSize,OutBuffer,256,&dwBytesReturned);
   DWRET_VALIDATE(dwRet,NULL);
   return PyByteArray_FromStringAndSize(OutBuffer,dwBytesReturned);
@@ -626,18 +630,20 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
   PyObject *pyRet=NULL;
   WORD wKeySize;
   DWORD dwRet,dwE,dwPubKeyDataSize=2120,dwPriKeyDataSize=2120;
-  BYTE *lpszPubFileID=NULL,*lpszPriFileID=NULL,pbPubKeyData[2120],pbPriKeyData[2120];
-  DWORD pubFileIdLen,priFileIdLen;
-  if(!PyArg_ParseTuple(args,"HIs#s#", 
+  BYTE lpszPubFileID[5]={0},lpszPriFileID[5]={0},pbPubKeyData[2120],pbPriKeyData[2120];
+  WORD pubFileId,priFileId;
+  if(!PyArg_ParseTuple(args,"HIHH", 
                             &wKeySize,
                             &dwE,
-                            &lpszPubFileID,&pubFileIdLen,
-                            &lpszPriFileID,&priFileIdLen)) {
+                            &pubFileId,
+                            &priFileId)) {
     return NULL;
   }
-  if(4!=pubFileIdLen || 4!=priFileIdLen){
+  if(0==pubFileId || 0==priFileId){
     INVALID_PARAMS("Invalid File Id!",NULL);
   }
+  sprintf(lpszPubFileID,"%04x",pubFileId);
+  sprintf(lpszPriFileID,"%04x",priFileId);
   dwRet = ETGenRsaKey(&self->context,
                       wKeySize,
                       dwE,
