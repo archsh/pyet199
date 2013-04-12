@@ -319,6 +319,15 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_MANUFACTURE_DATE,NULL,0,outBuffer,sizeof(ET_MANUFACTURE_DATE),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return pManuDate as DateTime
+            #if 1
+            return Py_BuildValue("(iiiiii)",2000+pManuDate->byYear,
+                                              pManuDate->byMonth,
+                                              pManuDate->byDay,
+                                              pManuDate->byHour,
+                                              pManuDate->byMinute,
+                                              pManuDate->bySecond);
+            #else //PyDateTime_FromDateAndTime cause a segmentation fault... WHY??
+            printf("1---GOGOGOGOGO...\n");
             pyRet = PyDateTime_FromDateAndTime(2000+pManuDate->byYear,
                                               pManuDate->byMonth,
                                               pManuDate->byDay,
@@ -326,14 +335,17 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
                                               pManuDate->byMinute,
                                               pManuDate->bySecond,
                                               0);
+            printf("2---GOGOGOGOGO...\n");
             Py_INCREF(pyRet);
+            printf("3---GOGOGOGOGO...\n");
             return pyRet;
+            #endif
             break;
         case ET_GET_DF_AVAILABLE_SPACE:
-            dwRet = ETControl(&self->context,ET_GET_DF_AVAILABLE_SPACE,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
+            dwRet = ETControl(&self->context,ET_GET_DF_AVAILABLE_SPACE,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-1] as WORD
-            return Py_BuildValue("H",*(WORD*)outBuffer);
+            return Py_BuildValue("I",*(DWORD*)outBuffer);
             break;
         case ET_GET_EF_INFO:
             pFileInfo=(PEFINFO)outBuffer;
@@ -343,12 +355,20 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_EF_INFO,fileId,fileIdLen,outBuffer,sizeof(EFINFO),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return pFileInfo as Dict
+            #if 1
+            sprintf(outBuffer+64,"%04x",pFileInfo->wFileID);
+            return Py_BuildValue("{sssbsI}",
+                                    "wFileID",outBuffer+64,//pFileInfo->wFileID,
+                                    "bFileType",pFileInfo->bFileType,
+                                    "wFileSize",pFileInfo->wFileSize);
+            #else
             pyRet = PyDict_New();
             PyDict_SetItemString(pyRet,"wFileID",PyInt_FromLong(pFileInfo->wFileID));
             PyDict_SetItemString(pyRet,"bFileType",PyInt_FromLong(pFileInfo->bFileType));
             PyDict_SetItemString(pyRet,"wFileSize",PyInt_FromLong(pFileInfo->wFileSize));
             Py_INCREF(pyRet);
             return pyRet;
+            #endif
             break;
         case ET_GET_COS_VERSION:
             dwRet = ETControl(&self->context,ET_GET_COS_VERSION,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
@@ -628,11 +648,15 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
                       pbPriKeyData,
                       &dwPriKeyDataSize);
   DWRET_VALIDATE(dwRet,NULL);
+  #if 1
+  return  Py_BuildValue("(s#s#)",pbPubKeyData,dwPubKeyDataSize,pbPriKeyData,dwPriKeyDataSize);
+  #else
   pyRet = PyTuple_New(2);
   PyTuple_SetItem(pyRet,0,PyByteArray_FromStringAndSize(pbPubKeyData,dwPubKeyDataSize));
   PyTuple_SetItem(pyRet,1,PyByteArray_FromStringAndSize(pbPriKeyData,dwPriKeyDataSize));
   Py_INCREF(pyRet);
   return pyRet;
+  #endif
 }
 
 /*********************************************************************************************************************/
@@ -693,6 +717,7 @@ static PyObject *Testing(PyObject *self,PyObject *args){
     return NULL;
   }
   printf("%d-%d-%d %d:%d:%d.%d",year,month,day,hour,minute,second,usec);
+  //return Py_BuildValue("O&",PyDateTime_FromDateAndTime,(year,month,day,hour,minute,second,usec));
   //dt = PyDate_FromDate(year,month,day);
   dt = PyDateTime_FromDateAndTime(year,month,day,hour,minute,second,usec);
   Py_DECREF(dt);
