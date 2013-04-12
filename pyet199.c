@@ -1,6 +1,6 @@
 #include <Python.h>
-#include <structmember.h>
 #include <datetime.h>
+#include <structmember.h>
 #include "ET199_32.h"
 #define _STR(x) #x
 #define STR(x)  _STR(x)
@@ -637,8 +637,9 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
 
 /*********************************************************************************************************************/
 
+PyDoc_STRVAR(pyETEnum__doc__,"Enumerate connected ET199 keys. Return a list of ETContext objects.");
 /**
- * Enum connected ET199 devices.  -> @ref: ETEnum
+ * Enumerate connected ET199 devices.  -> @ref: ETEnum
  * Args: No.
  * Return: A list of ETContext objects. NONE if no ET199 was connected or failed.
  */
@@ -684,10 +685,25 @@ static PyObject *pyETEnum(PyObject *self){
   return result;
 }
 
+static PyObject *Testing(PyObject *self,PyObject *args){
+  PyObject *dt = NULL;
+  int year=2013,month=4,day=12,hour=9,minute=8,second=15,usec=123;
+  if(!PyArg_ParseTuple(args,"|iiiiiii", 
+                            &year,&month,&day,&hour,&minute,&second,&usec)) {
+    return NULL;
+  }
+  printf("%d-%d-%d %d:%d:%d.%d",year,month,day,hour,minute,second,usec);
+  //dt = PyDate_FromDate(year,month,day);
+  dt = PyDateTime_FromDateAndTime(year,month,day,hour,minute,second,usec);
+  Py_DECREF(dt);
+  return dt;
+  Py_RETURN_NONE;
+}
+
 /***************************************************************************************************************************/
 static PyMethodDef methods[] = {
-  { "Enumerate", (PyCFunction)pyETEnum, METH_NOARGS,
-      "Enumerate connected ET199 keys. Return a list of ETContext objects." },
+  { "Enumerate", (PyCFunction)pyETEnum, METH_NOARGS,pyETEnum__doc__},
+  { "Testing", (PyCFunction)Testing, METH_VARARGS,"Testing"},
   { NULL, NULL, 0, NULL }
 };
 
