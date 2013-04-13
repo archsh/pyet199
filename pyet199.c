@@ -681,7 +681,7 @@ static PyObject *pyETEnum(PyObject *self){
   PyObject *result = PyList_New(0);
   dwRet = ETEnum(NULL,&keyCount);
   if(ET_E_INSUFFICIENT_BUFFER!=dwRet && !dwRet){
-    NORMAL_ERROR(dwRet,NULL);
+    DWRET_VALIDATE(dwRet,NULL);
   }
   if(keyCount==0){
     return result;
@@ -691,7 +691,7 @@ static PyObject *pyETEnum(PyObject *self){
   dwRet=ETEnum(pETContextList,&keyCount);
   if(0!=dwRet){
     free(pETContextList);
-    NORMAL_ERROR(dwRet,NULL);
+    DWRET_VALIDATE(dwRet,NULL);
   }
   for(i=0;i<keyCount;i++){
     ETContextObject *etcontext = (ETContextObject*)ETContext_new();
