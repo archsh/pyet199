@@ -162,10 +162,26 @@ static PyTypeObject ETContextType = {
   //ETContext_getsetlist,              /*tp_getset */
 };
 
+#define PyETContext_CheckExact(op) (Py_TYPE(op) == &ETContextType)
+
 static void
 ETContext_dealloc(ETContextObject* self)
 {
     self->ob_type->tp_free((PyObject*)self);
+}
+
+PyDoc_STRVAR(py_as_ETContext__doc__,"Convert an object to ETContext object.");
+static PyObject * 
+as_ETContext(ETContextObject *self, PyObject *args)
+{
+  ETContextObject *obj=NULL;
+  if (!PyArg_ParseTuple(args, "O", &obj)) {
+    return NULL;
+  }
+  if(NULL == obj || !PyETContext_CheckExact(obj)){
+    INVALID_PARAMS("Invalid param!",NULL);
+  }
+  return (PyObject*)obj;
 }
 
 static PyObject *
@@ -718,6 +734,7 @@ static PyObject *pyETEnum(PyObject *self){
 /***************************************************************************************************************************/
 static PyMethodDef methods[] = {
   { "Enumerate", (PyCFunction)pyETEnum, METH_NOARGS,pyETEnum__doc__},
+  { "as_ETContext",as_ETContext,METH_VARARGS,py_as_ETContext__doc__},
   { NULL, NULL, 0, NULL }
 };
 
