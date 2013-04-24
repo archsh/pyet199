@@ -51,7 +51,7 @@ PyDoc_STRVAR(ETContext_open__doc__,"open((dwOpenInfoSize,dwShareMode)) -> Open t
 static PyObject *ETContext_open(ETContextObject* self, PyObject *args);
 
 PyDoc_STRVAR(ETContext_close__doc__,"close() -> Close the key if it is opened.");
-static PyObject *ETContext_close(ETContextObject* self, PyObject *args);
+static PyObject *ETContext_close(ETContextObject* self);
 
 PyDoc_STRVAR(ETContext_ctrl_led__doc__,"ctrl_led(on/off[,wink]) -> Control the LED of key: True=on, False=off, num=wink.");
 static PyObject *ETContext_ctrl_led(ETContextObject* self, PyObject *args);
