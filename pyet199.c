@@ -181,6 +181,7 @@ as_ETContext(ETContextObject *self, PyObject *args)
   if(NULL == obj || !PyETContext_CheckExact(obj)){
     INVALID_PARAMS("Invalid param!",NULL);
   }
+  Py_XINCREF(obj);
   return (PyObject*)obj;
 }
 
@@ -192,6 +193,7 @@ ETContext_new()
     if (self == NULL)
         return NULL;
     memset(&self->context,0,sizeof(ET_CONTEXT));
+    Py_XINCREF(self);
     return (PyObject*)self;
 }
 
@@ -208,6 +210,7 @@ ETContext_init(ETContextObject *self, PyObject *args, PyObject *kwds)
                                       &self->context.dwCustomer,
                                       &pzAtr,&lAtr,
                                       &pzId,&lId))
+
         return -1; 
     if(pzId!=NULL && lId!=MAX_ID_LEN){
       INVALID_PARAMS("Length of ID must be 8!",-1);
@@ -229,6 +232,7 @@ ETContext_open(ETContextObject* self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O", &pyOpenInfo)) {
       return NULL;
     }
+    Py_XINCREF(pyOpenInfo);
   #if defined(WIN32)
     if(NULL != pyOpenInfo){
       //printf("PyTuple_Check(pyOpenInfo)=%d\n",PyTuple_Check(pyOpenInfo));
@@ -251,7 +255,9 @@ ETContext_open(ETContextObject* self, PyObject *args)
   #else
       dwRet = ETOpen(&self->context);
   #endif /*WIN32 | LINUX*/
+    Py_XDECREF(pyOpenInfo);
     DWRET_VALIDATE(dwRet,NULL);
+    Py_XINCREF(self);
     return self;
 }
 
@@ -283,7 +289,6 @@ ETContext_ctrl_led(ETContextObject* self, PyObject *args)
             DWRET_VALIDATE(dwRet,NULL);
         }
     }
-    
     Py_RETURN_TRUE;
 }
 
@@ -309,7 +314,7 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_DEVICE_TYPE,NULL,0,outBuffer,1,&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0] as ?
-            return Py_BuildValue("i",outBuffer[0]);
+            pyRet = Py_BuildValue("i",outBuffer[0]);
             break;
         case ET_GET_SERIAL_NUMBER:
             dwRet = ETControl(&self->context,ET_GET_SERIAL_NUMBER,NULL,0,outBuffer,9,&bytesReturned);
@@ -321,19 +326,19 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_DEVICE_USABLE_SPACE,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-3] as DWORD
-            return Py_BuildValue("i",*(DWORD*)outBuffer);
+            pyRet = Py_BuildValue("i",*(DWORD*)outBuffer);
             break;
         case ET_GET_DEVICE_ATR:
             dwRet = ETControl(&self->context,ET_GET_DEVICE_ATR,NULL,0,outBuffer,17,&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-15] as String
-            return Py_BuildValue("z#",outBuffer,16);
+            pyRet = Py_BuildValue("z#",outBuffer,16);
             break;
         case ET_GET_CUSTOMER_NAME:
             dwRet = ETControl(&self->context,ET_GET_CUSTOMER_NAME,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-3] as DWORD
-            return Py_BuildValue("I",*(DWORD*)outBuffer);
+            pyRet = Py_BuildValue("I",*(DWORD*)outBuffer);
             break;
         case ET_GET_MANUFACTURE_DATE:
             pManuDate=(PET_MANUFACTURE_DATE)outBuffer;
@@ -341,14 +346,14 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             DWRET_VALIDATE(dwRet,NULL);
             //Return pManuDate as DateTime
             #if 1
-            return Py_BuildValue("(iiiiii)",2000+pManuDate->byYear,
+            pyRet = Py_BuildValue("(iiiiii)",2000+pManuDate->byYear,
                                               pManuDate->byMonth,
                                               pManuDate->byDay,
                                               pManuDate->byHour,
                                               pManuDate->byMinute,
                                               pManuDate->bySecond);
             #else //PyDateTime_FromDateAndTime cause a segmentation fault... WHY??
-            printf("1---GOGOGOGOGO...\n");
+            Py_XINCREF()
             pyRet = PyDateTime_FromDateAndTime(2000+pManuDate->byYear,
                                               pManuDate->byMonth,
                                               pManuDate->byDay,
@@ -356,17 +361,13 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
                                               pManuDate->byMinute,
                                               pManuDate->bySecond,
                                               0);
-            printf("2---GOGOGOGOGO...\n");
-            Py_INCREF(pyRet);
-            printf("3---GOGOGOGOGO...\n");
-            return pyRet;
             #endif
             break;
         case ET_GET_DF_AVAILABLE_SPACE:
             dwRet = ETControl(&self->context,ET_GET_DF_AVAILABLE_SPACE,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-1] as WORD
-            return Py_BuildValue("I",*(DWORD*)outBuffer);
+            pyRet = Py_BuildValue("I",*(DWORD*)outBuffer);
             break;
         case ET_GET_EF_INFO:
             pFileInfo=(PEFINFO)outBuffer;
@@ -377,7 +378,7 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_EF_INFO,bFileId,4,outBuffer,sizeof(EFINFO),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return pFileInfo as Dict
-            return Py_BuildValue("{sHsbsI}",
+            pyRet = Py_BuildValue("{sHsbsI}",
                                     "wFileID",pFileInfo->wFileID,
                                     "bFileType",pFileInfo->bFileType,
                                     "wFileSize",pFileInfo->wFileSize);
@@ -386,14 +387,14 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_COS_VERSION,NULL,0,outBuffer,sizeof(WORD),&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-1] as WORD
-            return Py_BuildValue("H",*(WORD*)outBuffer);
+            pyRet = Py_BuildValue("H",*(WORD*)outBuffer);
             break;
         default:
             INVALID_PARAMS("param must between ET_GET_DEVICE_TYPE - ET_GET_COS_VERSION!",NULL);
             break;
     }
-    
-    Py_RETURN_NONE;
+    Py_XINCREF(pyRet);
+    return pyRet;
 }
 
 
@@ -406,6 +407,7 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i|O", &ctrlcode,&pyParam)) {
       return NULL;
     }
+    Py_XINCREF(pyParam);
     switch(ctrlcode){
       case ET_SET_DEVICE_ATR:
         if(NULL == pyParam || !PyString_Check(pyParam)){
@@ -456,6 +458,7 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
         INVALID_PARAMS("param must between ET_SET_DEVICE_ATR - ET_SET_CUSTOMER_NAME!",NULL);
         break;
     }
+    Py_XDECREF(pyParam);
     Py_RETURN_TRUE;
 }
 
@@ -480,6 +483,8 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
   if(!PyArg_ParseTuple(args, "HII|O", &dirId,&dwDirSize,&dwFlags,&pyDirInfo)) {
     return NULL;
   }
+  Py_XINCREF(pyDirInfo);
+
   if(0!=dirId){
     sprintf(pszDirId,"%04x",dirId);
   }else{
@@ -494,6 +499,7 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
       INVALID_PARAMS("DirInfo should be a tuple with one integer and one bytearray!",NULL);
     }
     pyAtr = PyTuple_GetItem(pyDirInfo,1);
+    Py_XINCREF(pyAtr);
     dwRet = PyString_Size(pyAtr);
     if(dwRet>16 || dwRet<1){
       INVALID_PARAMS("ATR length must between 1~16!",NULL);
@@ -506,7 +512,8 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
     dwRet = ETCreateDir(&self->context,pszDirId,dwDirSize,dwFlags);
     DWRET_VALIDATE(dwRet,NULL);
   }
-  
+  Py_XDECREF(pyAtr);
+  Py_XDECREF(pyDirInfo);
   Py_RETURN_TRUE;
 }
 
@@ -638,6 +645,7 @@ ETContext_execute(ETContextObject* self, PyObject *args)
   BYTE lpszFileID[5]={0},*pInBuffer=NULL,bFileType,OutBuffer[256];
   DWORD dwRet,dwInbufferSize,dwBytesReturned;
   WORD fileId;
+  PyObject *pyRet = NULL;
   if(!PyArg_ParseTuple(args, "Hz#", &fileId,&pInBuffer,&dwInbufferSize)) {
     return NULL;
   }
@@ -647,7 +655,9 @@ ETContext_execute(ETContextObject* self, PyObject *args)
   sprintf(lpszFileID,"%04x",fileId);
   dwRet = ETExecute(&self->context,lpszFileID,pInBuffer,dwInbufferSize,OutBuffer,256,&dwBytesReturned);
   DWRET_VALIDATE(dwRet,NULL);
-  return Py_BuildValue("z#",OutBuffer,dwBytesReturned);
+  pyRet = Py_BuildValue("z#",OutBuffer,dwBytesReturned);
+  Py_XINCREF(pyRet);
+  return pyRet;
 }
 
 static PyObject *
@@ -681,7 +691,7 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
                       &dwPriKeyDataSize);
   DWRET_VALIDATE(dwRet,NULL);
   #if 1
-  return  Py_BuildValue("(s#s#)",pbPubKeyData,dwPubKeyDataSize,pbPriKeyData,dwPriKeyDataSize);
+  pyRet =  Py_BuildValue("(s#s#)",pbPubKeyData,dwPubKeyDataSize,pbPriKeyData,dwPriKeyDataSize);
   #else
   pyRet = PyTuple_New(2);
   PyTuple_SetItem(pyRet,0,PyString_FromStringAndSize(pbPubKeyData,dwPubKeyDataSize));
@@ -689,6 +699,8 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
   Py_INCREF(pyRet);
   return pyRet;
   #endif
+  Py_XINCREF(pyRet);
+  return pyRet;
 }
 
 /*********************************************************************************************************************/
@@ -705,6 +717,7 @@ static PyObject *pyETEnum(PyObject *self){
   int i=0;
   ET_CONTEXT *pETContextList = NULL;
   PyObject *result = PyList_New(0);
+  Py_XINCREF(result);
   dwRet = ETEnum(NULL,&keyCount);
   if(ET_E_INSUFFICIENT_BUFFER!=dwRet && !dwRet){
     DWRET_VALIDATE(dwRet,NULL);
@@ -741,10 +754,25 @@ static PyObject *pyETEnum(PyObject *self){
   return result;
 }
 
+PyDoc_STRVAR(py_Testing__doc__,"Testing() -> Just for testing...");
+static PyObject *Testing(PyObject *self,PyObject *args){
+  PyObject *inputObj=NULL;
+  if(!PyArg_ParseTuple(args,"|O", 
+                            &inputObj)) {
+    return NULL;
+  }
+  if(NULL == inputObj){
+    inputObj = Py_BuildValue("s","Hello, Boy!!!!");
+  }
+  Py_XINCREF(inputObj);
+   return inputObj;
+}
+
 /***************************************************************************************************************************/
 static PyMethodDef methods[] = {
   { "Enumerate", (PyCFunction)pyETEnum, METH_NOARGS,pyETEnum__doc__},
   { "as_ETContext",as_ETContext,METH_VARARGS,py_as_ETContext__doc__},
+  { "Testing",Testing,METH_VARARGS,py_Testing__doc__},
   { NULL, NULL, 0, NULL }
 };
 
