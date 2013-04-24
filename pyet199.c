@@ -473,10 +473,15 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
   DWORD dwRet,dwDirSize,dwFlags=ET_CREATE_ROOT_DIR;
   ET_CREATEDIRINFO createInfo={0};
   PyObject *pyDirInfo=NULL,*pyAtr=NULL;
-  if(!PyArg_ParseTuple(args, "HI|IO", &dirId,&dwDirSize,&dwFlags,&pyDirInfo)) {
+  if(!PyArg_ParseTuple(args, "HII|O", &dirId,&dwDirSize,&dwFlags,&pyDirInfo)) {
     return NULL;
   }
-  sprintf(pszDirId,"%04x",dirId);
+  if(0!=dirId){
+    sprintf(pszDirId,"%04x",dirId);
+  }else{
+    dwDirSize=0;
+    dwFlags=ET_CREATE_ROOT_DIR;
+  }
   if(NULL != pyDirInfo){
     if(!PyTuple_Check(pyDirInfo) 
         || 2!=PyTuple_Size(pyDirInfo)
@@ -522,17 +527,18 @@ ETContext_change_dir(ETContextObject* self, PyObject *args)
 static PyObject *
 ETContext_erase_dir(ETContextObject* self, PyObject *args)
 {
-  BYTE  pszPath[5]={0};
-  WORD  wPath;
+  BYTE  pszPath[32]={0};
+  WORD  wPathLen;
   DWORD dwRet;
-  if(!PyArg_ParseTuple(args, "H", &wPath)) {
+  if(!PyArg_ParseTuple(args, "s#", pszPath,&wPathLen)) {
     return NULL;
   }
-  if(wPath==0){
-    INVALID_PARAMS("Not a valid path!",NULL);
+  if(wPathLen!=0){
+    dwRet = ETChangeDir(&self->context,pszPath);
+    DWRET_VALIDATE(dwRet,NULL);
   }
-  sprintf(pszPath,"%04x",wPath);
-  dwRet = ETEraseDir(&self->context,pszPath);
+  //sprintf(pszPath,"%04x",wPath);
+  dwRet = ETEraseDir(&self->context,NULL);
   DWRET_VALIDATE(dwRet,NULL);
   Py_RETURN_TRUE;
 }
