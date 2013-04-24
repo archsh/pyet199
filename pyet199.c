@@ -229,6 +229,7 @@ ETContext_open(ETContextObject* self, PyObject *args)
     if (!PyArg_ParseTuple(args, "|O", &pyOpenInfo)) {
       return NULL;
     }
+  #if defined(WIN32)
     if(NULL != pyOpenInfo){
       //printf("PyTuple_Check(pyOpenInfo)=%d\n",PyTuple_Check(pyOpenInfo));
       //printf("PyTuple_Size(pyOpenInfo)=%d\n",PyTuple_Size(pyOpenInfo));
@@ -247,6 +248,9 @@ ETContext_open(ETContextObject* self, PyObject *args)
     }else{
       dwRet = ETOpen(&self->context);
     }
+  #else
+      dwRet = ETOpen(&self->context);
+  #endif /*WIN32 | LINUX*/
     DWRET_VALIDATE(dwRet,NULL);
     return self;
 }
