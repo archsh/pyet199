@@ -315,7 +315,7 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_SERIAL_NUMBER,NULL,0,outBuffer,9,&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-7] as String
-            return PyByteArray_FromStringAndSize(outBuffer,8);
+            return Py_BuildValue("z#",outBuffer,8);
             break;
         case ET_GET_DEVICE_USABLE_SPACE:
             dwRet = ETControl(&self->context,ET_GET_DEVICE_USABLE_SPACE,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
@@ -327,7 +327,7 @@ ETContext_ctrl_get(ETContextObject* self, PyObject *args)
             dwRet = ETControl(&self->context,ET_GET_DEVICE_ATR,NULL,0,outBuffer,17,&bytesReturned);
             DWRET_VALIDATE(dwRet,NULL);
             //Return outBuffer[0-15] as String
-            return PyByteArray_FromStringAndSize(outBuffer,16);
+            return Py_BuildValue("z#",outBuffer,16);
             break;
         case ET_GET_CUSTOMER_NAME:
             dwRet = ETControl(&self->context,ET_GET_CUSTOMER_NAME,NULL,0,outBuffer,sizeof(DWORD),&bytesReturned);
@@ -408,14 +408,14 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
     }
     switch(ctrlcode){
       case ET_SET_DEVICE_ATR:
-        if(NULL == pyParam || !PyByteArray_Check(pyParam)){
+        if(NULL == pyParam || !PyString_Check(pyParam)){
           INVALID_PARAMS("ATR should provide must be a bytearray!",NULL);
         }
-        len = PyByteArray_Size(pyParam);
+        len = PyString_Size(pyParam);
         if(len>16 || len<1){
           INVALID_PARAMS("ATR length must between 1~16!",NULL);
         }
-        dwRet = ETControl(&self->context,ET_SET_DEVICE_ATR,PyByteArray_AsString(pyParam),len,NULL,0,&dwOut);
+        dwRet = ETControl(&self->context,ET_SET_DEVICE_ATR,PyString_AsString(pyParam),len,NULL,0,&dwOut);
         DWRET_VALIDATE(dwRet,NULL);
         break;
       case ET_SET_DEVICE_TYPE:
@@ -431,25 +431,25 @@ ETContext_ctrl_set(ETContextObject* self, PyObject *args)
         DWRET_VALIDATE(dwRet,NULL);
         break;
       case ET_SET_SHELL_KEY:
-        if(NULL == pyParam || !PyByteArray_Check(pyParam)){
+        if(NULL == pyParam || !PyString_Check(pyParam)){
           INVALID_PARAMS("Shell key should provide must be a bytearray!",NULL);
         }
-        len = PyByteArray_Size(pyParam);
+        len = PyString_Size(pyParam);
         if(len>8 || len<1){
           INVALID_PARAMS("ATR length must between 1~8!",NULL);
         }
-        dwRet = ETControl(&self->context,ET_SET_SHELL_KEY,PyByteArray_AsString(pyParam),len,NULL,0,&dwOut);
+        dwRet = ETControl(&self->context,ET_SET_SHELL_KEY,PyString_AsString(pyParam),len,NULL,0,&dwOut);
         DWRET_VALIDATE(dwRet,NULL);
         break;
       case ET_SET_CUSTOMER_NAME:
-        if(NULL == pyParam || !PyByteArray_Check(pyParam)){
+        if(NULL == pyParam || !PyString_Check(pyParam)){
           INVALID_PARAMS("Customer name should provide must be a bytearray!",NULL);
         }
-        len = PyByteArray_Size(pyParam);
+        len = PyString_Size(pyParam);
         if(len>250 || len<1){
           INVALID_PARAMS("ATR length must between 1~250!",NULL);
         }
-        dwRet = ETControl(&self->context,ET_SET_CUSTOMER_NAME,PyByteArray_AsString(pyParam),len,NULL,0,&dwOut);
+        dwRet = ETControl(&self->context,ET_SET_CUSTOMER_NAME,PyString_AsString(pyParam),len,NULL,0,&dwOut);
         DWRET_VALIDATE(dwRet,NULL);
         break;
       default:
@@ -490,16 +490,16 @@ ETContext_create_dir(ETContextObject* self, PyObject *args)
     if(!PyTuple_Check(pyDirInfo) 
         || 2!=PyTuple_Size(pyDirInfo)
         || !PyInt_Check(PyTuple_GetItem(pyDirInfo,0))
-        || !PyByteArray_Check(PyTuple_GetItem(pyDirInfo,1))){
+        || !PyString_Check(PyTuple_GetItem(pyDirInfo,1))){
       INVALID_PARAMS("DirInfo should be a tuple with one integer and one bytearray!",NULL);
     }
     pyAtr = PyTuple_GetItem(pyDirInfo,1);
-    dwRet = PyByteArray_Size(pyAtr);
+    dwRet = PyString_Size(pyAtr);
     if(dwRet>16 || dwRet<1){
       INVALID_PARAMS("ATR length must between 1~16!",NULL);
     }
     createInfo.dwCreateDirInfoSize = PyInt_AsUnsignedLongMask(PyTuple_GetItem(pyDirInfo,0));
-    memcpy(createInfo.szAtr,PyByteArray_AsString(pyAtr),dwRet);
+    memcpy(createInfo.szAtr,PyString_AsString(pyAtr),dwRet);
     dwRet = ETCreateDirEx(&self->context,pszDirId,dwDirSize,dwFlags,&createInfo);
     DWRET_VALIDATE(dwRet,NULL);
   }else{
@@ -647,7 +647,7 @@ ETContext_execute(ETContextObject* self, PyObject *args)
   sprintf(lpszFileID,"%04x",fileId);
   dwRet = ETExecute(&self->context,lpszFileID,pInBuffer,dwInbufferSize,OutBuffer,256,&dwBytesReturned);
   DWRET_VALIDATE(dwRet,NULL);
-  return PyByteArray_FromStringAndSize(OutBuffer,dwBytesReturned);
+  return Py_BuildValue("z#",OutBuffer,dwBytesReturned);
 }
 
 static PyObject *
@@ -684,8 +684,8 @@ ETContext_gen_rsa_key(ETContextObject* self, PyObject *args)
   return  Py_BuildValue("(s#s#)",pbPubKeyData,dwPubKeyDataSize,pbPriKeyData,dwPriKeyDataSize);
   #else
   pyRet = PyTuple_New(2);
-  PyTuple_SetItem(pyRet,0,PyByteArray_FromStringAndSize(pbPubKeyData,dwPubKeyDataSize));
-  PyTuple_SetItem(pyRet,1,PyByteArray_FromStringAndSize(pbPriKeyData,dwPriKeyDataSize));
+  PyTuple_SetItem(pyRet,0,PyString_FromStringAndSize(pbPubKeyData,dwPubKeyDataSize));
+  PyTuple_SetItem(pyRet,1,PyString_FromStringAndSize(pbPriKeyData,dwPriKeyDataSize));
   Py_INCREF(pyRet);
   return pyRet;
   #endif
