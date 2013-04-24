@@ -63,7 +63,7 @@ PyDoc_STRVAR(ETContext_ctrl_set__doc__,"ctr_set(code[,data]) -> Set information 
 static PyObject *ETContext_ctrl_set(ETContextObject* self, PyObject *args);
 
 PyDoc_STRVAR(ETContext_ctrl_reset__doc__,"ctrl_reset() -> Reset connected key.");
-static PyObject *ETContext_ctrl_reset(ETContextObject* self, PyObject *args);
+static PyObject *ETContext_ctrl_reset(ETContextObject* self);
 
 PyDoc_STRVAR(ETContext_create_dir__doc__,"create_dir(dirId,dirSize[,dirFlags,dirInfo]) -> Create dir.");
 static PyObject *ETContext_create_dir(ETContextObject* self, PyObject *args);
