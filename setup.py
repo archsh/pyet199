@@ -46,14 +46,14 @@ pyet199_mod = Extension('pyet199',
 
 setup (name='pyet199',
        version=__version__,
-       description="DR Licensing.",
-       license="DR License",
+       description="A Python interface to ET199 USB Dongle.",
+       license="MIT",
        long_description="""\
 	   
 """,
        author='Mingcai SHEN',
-       author_email='shenmc@dingrong.cn',
-       url='http://www.dingrong.cn/rsbk_license',
+       author_email='archsh@gmail.com',
+       url='http://github.com/archsh/pyet199',
        classifiers=[
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
