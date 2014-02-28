@@ -57,7 +57,7 @@ setup (name='pyet199',
        classifiers=[
     'Development Status :: 4 - Beta',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: DR License',
+    'License :: OSI Approved :: MIT',
     'Topic :: System :: License',
     ],
        ext_modules=[pyet199_mod])
